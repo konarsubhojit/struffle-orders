@@ -1,7 +1,0 @@
-node_modules
-dist
-.env
-.DS_Store
-*.log
-vite.config.js
-vite.config.d.ts
