@@ -369,66 +369,70 @@ const Order = {
   },
 
   async create(data) {
-    const db = getDatabase();
-    const orderId = generateOrderId();
-    
-    const orderResult = await db.insert(orders).values({
-      orderId: orderId,
-      orderFrom: data.orderFrom,
-      customerName: data.customerName.trim(),
-      customerId: data.customerId.trim(),
-      address: data.address?.trim() || null,
-      totalPrice: data.totalPrice.toString(),
-      paidAmount: (data.paidAmount || 0).toString(),
-      paymentStatus: data.paymentStatus || 'unpaid',
-      confirmationStatus: data.confirmationStatus || 'unconfirmed',
-      customerNotes: data.customerNotes?.trim() || null,
-      priority: data.priority || 0,
-      orderDate: data.orderDate ? new Date(data.orderDate) : new Date(),
-      expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate) : null,
-      deliveryStatus: data.deliveryStatus || 'not_shipped',
-      trackingId: data.trackingId?.trim() || null,
-      deliveryPartner: data.deliveryPartner?.trim() || null,
-      actualDeliveryDate: data.actualDeliveryDate ? new Date(data.actualDeliveryDate) : null
-    }).returning();
-    
-    const newOrder = orderResult[0];
-    
-    const orderItemsData = data.items.map(item => ({
-      orderId: newOrder.id,
-      itemId: item.item,
-      name: item.name,
-      price: item.price.toString(),
-      quantity: item.quantity,
-      customizationRequest: item.customizationRequest?.trim() || null
-    }));
-    
-    const itemsResult = await db.insert(orderItems).values(orderItemsData).returning();
-    
-    return transformOrder(newOrder, itemsResult);
+    return executeWithRetry(async () => {
+      const db = getDatabase();
+      const orderId = generateOrderId();
+      
+      const orderResult = await db.insert(orders).values({
+        orderId: orderId,
+        orderFrom: data.orderFrom,
+        customerName: data.customerName.trim(),
+        customerId: data.customerId.trim(),
+        address: data.address?.trim() || null,
+        totalPrice: data.totalPrice.toString(),
+        paidAmount: (data.paidAmount || 0).toString(),
+        paymentStatus: data.paymentStatus || 'unpaid',
+        confirmationStatus: data.confirmationStatus || 'unconfirmed',
+        customerNotes: data.customerNotes?.trim() || null,
+        priority: data.priority || 0,
+        orderDate: data.orderDate ? new Date(data.orderDate) : new Date(),
+        expectedDeliveryDate: data.expectedDeliveryDate ? new Date(data.expectedDeliveryDate) : null,
+        deliveryStatus: data.deliveryStatus || 'not_shipped',
+        trackingId: data.trackingId?.trim() || null,
+        deliveryPartner: data.deliveryPartner?.trim() || null,
+        actualDeliveryDate: data.actualDeliveryDate ? new Date(data.actualDeliveryDate) : null
+      }).returning();
+      
+      const newOrder = orderResult[0];
+      
+      const orderItemsData = data.items.map(item => ({
+        orderId: newOrder.id,
+        itemId: item.item,
+        name: item.name,
+        price: item.price.toString(),
+        quantity: item.quantity,
+        customizationRequest: item.customizationRequest?.trim() || null
+      }));
+      
+      const itemsResult = await db.insert(orderItems).values(orderItemsData).returning();
+      
+      return transformOrder(newOrder, itemsResult);
+    }, { operationName: 'Order.create' });
   },
 
   async findByIdAndUpdate(id, data) {
-    const db = getDatabase();
-    const numericId = Number.parseInt(id, 10);
-    if (Number.isNaN(numericId)) return null;
-    
-    const existingOrder = await db.select().from(orders).where(eq(orders.id, numericId));
-    if (existingOrder.length === 0) return null;
-    
-    const updateData = buildOrderUpdateData(data);
-    
-    if (Object.keys(updateData).length > 0) {
-      await db.update(orders)
-        .set(updateData)
-        .where(eq(orders.id, numericId));
-    }
-    
-    if (data.items && Array.isArray(data.items)) {
-      await updateOrderItems(db, numericId, data.items);
-    }
-    
-    return this.findById(numericId);
+    return executeWithRetry(async () => {
+      const db = getDatabase();
+      const numericId = Number.parseInt(id, 10);
+      if (Number.isNaN(numericId)) return null;
+      
+      const existingOrder = await db.select().from(orders).where(eq(orders.id, numericId));
+      if (existingOrder.length === 0) return null;
+      
+      const updateData = buildOrderUpdateData(data);
+      
+      if (Object.keys(updateData).length > 0) {
+        await db.update(orders)
+          .set(updateData)
+          .where(eq(orders.id, numericId));
+      }
+      
+      if (data.items && Array.isArray(data.items)) {
+        await updateOrderItems(db, numericId, data.items);
+      }
+      
+      return this.findById(numericId);
+    }, { operationName: 'Order.findByIdAndUpdate' });
   }
 };
 
