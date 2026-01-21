@@ -89,12 +89,7 @@ export default function BulkOrderToolbar({
   const isLoading = bulkUpdateMutation.isPending || bulkDeleteMutation.isPending;
   const selectedCount = selectedOrderIds.length;
   
-  // Don't render if no orders are selected
-  if (selectedCount === 0) {
-    return null;
-  }
-  
-  // Status menu handlers
+  // Status menu handlers - must be before conditional returns
   const handleStatusMenuOpen = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     setStatusMenuAnchor(event.currentTarget);
   }, []);
@@ -124,7 +119,7 @@ export default function BulkOrderToolbar({
       
       if (result.success) {
         showSuccess(
-          `Successfully updated ${result.processedCount} order${result.processedCount !== 1 ? 's' : ''} to "${getOrderStatusLabel(status)}"`,
+          `Successfully updated ${result.processedCount} order${result.processedCount === 1 ? '' : 's'} to "${getOrderStatusLabel(status)}"`,
           'Bulk Update Complete'
         );
         onSuccess?.();
@@ -153,7 +148,7 @@ export default function BulkOrderToolbar({
       
       if (result.success) {
         showSuccess(
-          `Successfully updated payment status for ${result.processedCount} order${result.processedCount !== 1 ? 's' : ''} to "${getPaymentStatusLabel(paymentStatus)}"`,
+          `Successfully updated payment status for ${result.processedCount} order${result.processedCount === 1 ? '' : 's'} to "${getPaymentStatusLabel(paymentStatus)}"`,
           'Bulk Update Complete'
         );
         onSuccess?.();
@@ -192,7 +187,7 @@ export default function BulkOrderToolbar({
       
       if (result.success) {
         showSuccess(
-          `Successfully deleted ${result.processedCount} order${result.processedCount !== 1 ? 's' : ''}`,
+          `Successfully deleted ${result.processedCount} order${result.processedCount === 1 ? '' : 's'}`,
           'Bulk Delete Complete'
         );
         onSuccess?.();
@@ -209,6 +204,11 @@ export default function BulkOrderToolbar({
       handleDeleteDialogClose();
     }
   }, [selectedOrderIds, bulkDeleteMutation, showSuccess, showError, onSuccess, onClearSelection, handleDeleteDialogClose]);
+  
+  // Don't render if no orders are selected
+  if (selectedCount === 0) {
+    return null;
+  }
   
   return (
     <>
@@ -228,7 +228,7 @@ export default function BulkOrderToolbar({
       >
         {/* Selected count chip */}
         <Chip
-          label={`${selectedCount} order${selectedCount !== 1 ? 's' : ''} selected`}
+          label={`${selectedCount} order${selectedCount === 1 ? '' : 's'} selected`}
           color="default"
           size="medium"
           icon={<CheckCircleIcon />}
@@ -266,8 +266,10 @@ export default function BulkOrderToolbar({
           anchorEl={statusMenuAnchor}
           open={Boolean(statusMenuAnchor)}
           onClose={handleStatusMenuClose}
-          MenuListProps={{
-            'aria-label': 'Order status options',
+          slotProps={{
+            list: {
+              'aria-label': 'Order status options',
+            },
           }}
         >
           {ORDER_STATUSES.map((status) => (
@@ -307,8 +309,10 @@ export default function BulkOrderToolbar({
           anchorEl={paymentMenuAnchor}
           open={Boolean(paymentMenuAnchor)}
           onClose={handlePaymentMenuClose}
-          MenuListProps={{
-            'aria-label': 'Payment status options',
+          slotProps={{
+            list: {
+              'aria-label': 'Payment status options',
+            },
           }}
         >
           {PAYMENT_STATUSES.map((status) => (
@@ -365,11 +369,11 @@ export default function BulkOrderToolbar({
         aria-describedby="delete-dialog-description"
       >
         <DialogTitle id="delete-dialog-title">
-          Delete {selectedCount} Order{selectedCount !== 1 ? 's' : ''}?
+          Delete {selectedCount} Order{selectedCount === 1 ? '' : 's'}?
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete {selectedCount} selected order{selectedCount !== 1 ? 's' : ''}? 
+            Are you sure you want to delete {selectedCount} selected order{selectedCount === 1 ? '' : 's'}? 
             This action will move the orders to the deleted items archive.
           </DialogContentText>
           <FormControlLabel

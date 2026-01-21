@@ -47,7 +47,7 @@ export default function CustomerAutocomplete({
   error = false,
   helperText,
   size = 'medium',
-}: CustomerAutocompleteProps): ReactElement {
+}: Readonly<CustomerAutocompleteProps>): ReactElement {
   const [inputValue, setInputValue] = useState('');
   const [debouncedInput, setDebouncedInput] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -92,7 +92,7 @@ export default function CustomerAutocomplete({
         return;
       }
 
-      if (newValue && newValue.isAddNew) {
+      if (newValue?.isAddNew) {
         // Open dialog to create new customer
         setDialogOpen(true);
       } else if (newValue) {
@@ -227,20 +227,22 @@ export default function CustomerAutocomplete({
             required={required}
             error={error}
             helperText={helperText}
-            InputProps={{
-              ...params.InputProps,
-              endAdornment: (
-                <>
-                  {isLoading ? (
-                    <CircularProgress color="inherit" size={20} aria-label="Loading customers" />
-                  ) : null}
-                  {params.InputProps.endAdornment}
-                </>
-              ),
-            }}
-            inputProps={{
-              ...params.inputProps,
-              'aria-label': label,
+            slotProps={{
+              input: {
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {isLoading ? (
+                      <CircularProgress color="inherit" size={20} aria-label="Loading customers" />
+                    ) : null}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              },
+              htmlInput: {
+                ...params.inputProps,
+                'aria-label': label,
+              },
             }}
           />
         )}

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { sql, and, gte, lte, eq } from 'drizzle-orm';
+import { and, gte, lte, eq } from 'drizzle-orm';
 import { authOptions } from '@/lib/auth';
 import { getDatabase } from '@/lib/db/connection';
-import { orders, orderItems, items } from '@/lib/db/schema';
+import { orders, orderItems } from '@/lib/db/schema';
 import { executeWithRetry } from '@/lib/utils/dbRetry';
 import { createLogger } from '@/lib/utils/logger';
 

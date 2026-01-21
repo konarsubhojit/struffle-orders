@@ -116,15 +116,15 @@ export async function GET(request: NextRequest) {
           : 0;
 
         // Format period string based on groupBy
-        const periodDate = new Date(row.period as unknown as string);
+        const periodDate = new Date(row.period as string);
         let periodStr: string;
         
         switch (groupBy) {
           case 'week':
             // ISO week format: YYYY-Www
-            const weekNum = getISOWeek(periodDate);
+            { const weekNum = getISOWeek(periodDate);
             periodStr = `${periodDate.getFullYear()}-W${weekNum.toString().padStart(2, '0')}`;
-            break;
+            break; }
           case 'month':
             periodStr = `${periodDate.getFullYear()}-${(periodDate.getMonth() + 1).toString().padStart(2, '0')}`;
             break;

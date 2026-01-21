@@ -69,9 +69,9 @@ function formatRelativeTime(date: Date): string {
   if (diffSeconds < 60) {
     return 'Just now';
   } else if (diffMinutes < 60) {
-    return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
   } else if (diffHours < 24) {
-    return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
   } else if (diffDays === 1) {
     return 'Yesterday';
   } else if (diffDays < 7) {
@@ -132,7 +132,7 @@ function NoteItem({
   onSaveEdit,
   onCancelEdit,
   isSaving,
-}: NoteItemProps): ReactElement {
+}: Readonly<NoteItemProps>): ReactElement {
   const typeConfig = NOTE_TYPE_CONFIG[note.noteType];
   const createdDate = new Date(note.createdAt);
   const userName = note.userName || note.userEmail || 'Unknown User';
@@ -284,7 +284,7 @@ function NoteItem({
   );
 }
 
-export default function OrderNotesPanel({ orderId }: OrderNotesPanelProps): ReactElement {
+export default function OrderNotesPanel({ orderId }: Readonly<OrderNotesPanelProps>): ReactElement {
   const { showSuccess, showError } = useNotification();
 
   // Form state for new note
@@ -449,7 +449,7 @@ export default function OrderNotesPanel({ orderId }: OrderNotesPanelProps): Reac
               label={notes.length}
               size="small"
               variant="outlined"
-              aria-label={`${notes.length} note${notes.length !== 1 ? 's' : ''}`}
+              aria-label={`${notes.length} note${notes.length === 1 ? '' : 's'}`}
             />
           )}
         </Stack>

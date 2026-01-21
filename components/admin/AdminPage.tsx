@@ -16,7 +16,6 @@ import {
   Button,
   Alert,
   CircularProgress,
-  Grid,
   Card,
   CardContent,
   Dialog,
@@ -27,6 +26,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -47,7 +47,7 @@ interface TabPanelProps {
   value: number;
 }
 
-function TabPanel({ children, value, index, ...other }: TabPanelProps) {
+function TabPanel({ children, value, index, ...other }: Readonly<TabPanelProps>) {
   return (
     <div
       role="tabpanel"
@@ -191,7 +191,7 @@ export default function AdminPage() {
         {/* Statistics Cards */}
         {stats && (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card>
                 <CardContent>
                   <Typography color="textSecondary" gutterBottom>
@@ -201,7 +201,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card>
                 <CardContent>
                   <Typography color="textSecondary" gutterBottom>
@@ -213,7 +213,7 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <Card>
                 <CardContent>
                   <Typography color="textSecondary" gutterBottom>

@@ -33,7 +33,7 @@ interface TabPanelProps {
   ariaLabelledby: string;
 }
 
-function TabPanel({ children, value, index, id, ariaLabelledby }: TabPanelProps) {
+function TabPanel({ children, value, index, id, ariaLabelledby }: Readonly<TabPanelProps>) {
   return (
     <Box
       role="tabpanel"
@@ -239,11 +239,11 @@ function AnalyticsDashboard() {
               label="Start Date"
               value={startDate}
               onChange={(e) => handleCustomDateChange('start', e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              inputProps={{
-                'aria-label': 'Start date for analytics',
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { 'aria-label': 'Start date for analytics' },
               }}
+              size="small"
             />
           </Grid>
           <Grid size={{ xs: 6, sm: 'auto' }}>
@@ -252,11 +252,11 @@ function AnalyticsDashboard() {
               label="End Date"
               value={endDate}
               onChange={(e) => handleCustomDateChange('end', e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              inputProps={{
-                'aria-label': 'End date for analytics',
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { 'aria-label': 'End date for analytics' },
               }}
+              size="small"
             />
           </Grid>
         </Grid>

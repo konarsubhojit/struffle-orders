@@ -14,11 +14,11 @@ export const users = pgTable('users', {
   lastLogin: timestamp('last_login'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-}, (table) => ({
-  emailIdx: index('users_email_idx').on(table.email),
-  googleIdIdx: index('users_google_id_idx').on(table.googleId),
-  roleIdx: index('users_role_idx').on(table.role)
-}));
+}, (table) => [
+  index('users_email_idx').on(table.email),
+  index('users_google_id_idx').on(table.googleId),
+  index('users_role_idx').on(table.role)
+]);
 
 export const items = pgTable('items', {
   id: serial('id').primaryKey(),
@@ -38,14 +38,14 @@ export const items = pgTable('items', {
   supplierSku: text('supplier_sku'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at')
-}, (table) => ({
+}, (table) => [
   // Performance indexes for common queries (as per ARCHITECTURE_ANALYSIS.md)
-  nameIdx: index('items_name_idx').on(table.name),
-  deletedAtIdx: index('items_deleted_at_idx').on(table.deletedAt),
+  index('items_name_idx').on(table.name),
+  index('items_deleted_at_idx').on(table.deletedAt),
   // Stock management indexes
-  trackStockIdx: index('items_track_stock_idx').on(table.trackStock),
-  lowStockIdx: index('items_low_stock_idx').on(table.stockQuantity, table.lowStockThreshold)
-}));
+  index('items_track_stock_idx').on(table.trackStock),
+  index('items_low_stock_idx').on(table.stockQuantity, table.lowStockThreshold)
+]);
 
 export const itemDesigns = pgTable('item_designs', {
   id: serial('id').primaryKey(),
@@ -55,10 +55,10 @@ export const itemDesigns = pgTable('item_designs', {
   isPrimary: boolean('is_primary').default(false).notNull(),
   displayOrder: integer('display_order').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  itemIdIdx: index('item_designs_item_id_idx').on(table.itemId),
-  isPrimaryIdx: index('item_designs_is_primary_idx').on(table.isPrimary)
-}));
+}, (table) => [
+  index('item_designs_item_id_idx').on(table.itemId),
+  index('item_designs_is_primary_idx').on(table.isPrimary)
+]);
 
 export const orders = pgTable('orders', {
   id: serial('id').primaryKey(),
@@ -82,19 +82,19 @@ export const orders = pgTable('orders', {
   deliveryPartner: text('delivery_partner'),
   actualDeliveryDate: timestamp('actual_delivery_date'),
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
+}, (table) => [
   // Performance indexes for filtered queries (as per ARCHITECTURE_ANALYSIS.md)
-  orderIdIdx: index('orders_order_id_idx').on(table.orderId),
-  customerIdIdx: index('orders_customer_id_idx').on(table.customerId),
-  deliveryDateIdx: index('orders_delivery_date_idx').on(table.expectedDeliveryDate),
-  priorityIdx: index('orders_priority_idx').on(table.priority),
-  statusIdx: index('orders_status_idx').on(table.status),
+  index('orders_order_id_idx').on(table.orderId),
+  index('orders_customer_id_idx').on(table.customerId),
+  index('orders_delivery_date_idx').on(table.expectedDeliveryDate),
+  index('orders_priority_idx').on(table.priority),
+  index('orders_status_idx').on(table.status),
   // Index for pagination ORDER BY created_at DESC
-  createdAtIdx: index('orders_created_at_idx').on(table.createdAt),
+  index('orders_created_at_idx').on(table.createdAt),
   // Composite index for cursor-based pagination (created_at DESC, id DESC)
   // This enables stable, efficient cursor pagination with no duplicates/skips
-  createdAtIdIdx: index('orders_created_at_id_idx').on(table.createdAt.desc(), table.id.desc())
-}));
+  index('orders_created_at_id_idx').on(table.createdAt.desc(), table.id.desc())
+]);
 
 export const orderItems = pgTable('order_items', {
   id: serial('id').primaryKey(),
@@ -106,10 +106,10 @@ export const orderItems = pgTable('order_items', {
   costPrice: numeric('cost_price', { precision: 10, scale: 2 }), // Snapshot of cost at order time
   quantity: integer('quantity').notNull(),
   customizationRequest: text('customization_request')
-}, (table) => ({
+}, (table) => [
   // Index for efficient order items lookup by order_id
-  orderIdIdx: index('order_items_order_id_idx').on(table.orderId)
-}));
+  index('order_items_order_id_idx').on(table.orderId)
+]);
 
 export const feedbacks = pgTable('feedbacks', {
   id: serial('id').primaryKey(),
@@ -123,13 +123,13 @@ export const feedbacks = pgTable('feedbacks', {
   respondedAt: timestamp('responded_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-}, (table) => ({
+}, (table) => [
   // Performance indexes as per ARCHITECTURE_OPTIMIZATION.md
-  orderIdIdx: index('idx_feedbacks_order_id').on(table.orderId),
-  ratingIdx: index('idx_feedbacks_rating').on(table.rating),
-  createdAtIdx: index('idx_feedbacks_created_at').on(table.createdAt),
-  isPublicIdx: index('idx_feedbacks_is_public').on(table.isPublic)
-}));
+  index('idx_feedbacks_order_id').on(table.orderId),
+  index('idx_feedbacks_rating').on(table.rating),
+  index('idx_feedbacks_created_at').on(table.createdAt),
+  index('idx_feedbacks_is_public').on(table.isPublic)
+]);
 
 export const feedbackTokens = pgTable('feedback_tokens', {
   id: serial('id').primaryKey(),
@@ -138,11 +138,11 @@ export const feedbackTokens = pgTable('feedback_tokens', {
   used: integer('used').default(0),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
+}, (table) => [
   // Performance indexes as per ARCHITECTURE_OPTIMIZATION.md
-  orderIdIdx: index('idx_feedback_tokens_order_id').on(table.orderId),
-  tokenIdx: index('idx_feedback_tokens_token').on(table.token)
-}));
+  index('idx_feedback_tokens_order_id').on(table.orderId),
+  index('idx_feedback_tokens_token').on(table.token)
+]);
 
 // Daily digest notification system tables
 
@@ -185,19 +185,19 @@ export const categories = pgTable('categories', {
   displayOrder: integer('display_order').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-}, (table) => ({
-  nameIdx: index('categories_name_idx').on(table.name),
-  parentIdIdx: index('categories_parent_id_idx').on(table.parentId)
-}));
+}, (table) => [
+  index('categories_name_idx').on(table.name),
+  index('categories_parent_id_idx').on(table.parentId)
+]);
 
 export const tags = pgTable('tags', {
   id: serial('id').primaryKey(),
   name: text('name').notNull().unique(),
   color: text('color').default('#3B82F6'), // Hex color for UI display
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  nameIdx: index('tags_name_idx').on(table.name)
-}));
+}, (table) => [
+  index('tags_name_idx').on(table.name)
+]);
 
 // Junction table for item-category relationship (many-to-many)
 export const itemCategories = pgTable('item_categories', {
@@ -205,11 +205,11 @@ export const itemCategories = pgTable('item_categories', {
   itemId: integer('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
   categoryId: integer('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  itemIdIdx: index('item_categories_item_id_idx').on(table.itemId),
-  categoryIdIdx: index('item_categories_category_id_idx').on(table.categoryId),
-  uniqueItemCategory: index('item_categories_unique_idx').on(table.itemId, table.categoryId)
-}));
+}, (table) => [
+  index('item_categories_item_id_idx').on(table.itemId),
+  index('item_categories_category_id_idx').on(table.categoryId),
+  index('item_categories_unique_idx').on(table.itemId, table.categoryId)
+]);
 
 // Junction table for item-tag relationship (many-to-many)
 export const itemTags = pgTable('item_tags', {
@@ -217,11 +217,11 @@ export const itemTags = pgTable('item_tags', {
   itemId: integer('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
   tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  itemIdIdx: index('item_tags_item_id_idx').on(table.itemId),
-  tagIdIdx: index('item_tags_tag_id_idx').on(table.tagId),
-  uniqueItemTag: index('item_tags_unique_idx').on(table.itemId, table.tagId)
-}));
+}, (table) => [
+  index('item_tags_item_id_idx').on(table.itemId),
+  index('item_tags_tag_id_idx').on(table.tagId),
+  index('item_tags_unique_idx').on(table.itemId, table.tagId)
+]);
 
 // ============================================
 // Audit Log System
@@ -250,15 +250,15 @@ export const auditLogs = pgTable('audit_logs', {
   userAgent: text('user_agent'),
   metadata: text('metadata'), // Additional context as JSON
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  entityTypeIdx: index('audit_logs_entity_type_idx').on(table.entityType),
-  entityIdIdx: index('audit_logs_entity_id_idx').on(table.entityId),
-  actionIdx: index('audit_logs_action_idx').on(table.action),
-  userIdIdx: index('audit_logs_user_id_idx').on(table.userId),
-  createdAtIdx: index('audit_logs_created_at_idx').on(table.createdAt),
+}, (table) => [
+  index('audit_logs_entity_type_idx').on(table.entityType),
+  index('audit_logs_entity_id_idx').on(table.entityId),
+  index('audit_logs_action_idx').on(table.action),
+  index('audit_logs_user_id_idx').on(table.userId),
+  index('audit_logs_created_at_idx').on(table.createdAt),
   // Composite index for entity lookup (most common query pattern)
-  entityLookupIdx: index('audit_logs_entity_lookup_idx').on(table.entityType, table.entityId, table.createdAt)
-}));
+  index('audit_logs_entity_lookup_idx').on(table.entityType, table.entityId, table.createdAt)
+]);
 
 // Order-specific audit trail with more detail
 export const orderAuditTrail = pgTable('order_audit_trail', {
@@ -273,13 +273,13 @@ export const orderAuditTrail = pgTable('order_audit_trail', {
   userName: text('user_name'),
   notes: text('notes'), // Optional notes explaining the change
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  orderIdIdx: index('order_audit_trail_order_id_idx').on(table.orderId),
-  actionIdx: index('order_audit_trail_action_idx').on(table.action),
-  createdAtIdx: index('order_audit_trail_created_at_idx').on(table.createdAt),
+}, (table) => [
+  index('order_audit_trail_order_id_idx').on(table.orderId),
+  index('order_audit_trail_action_idx').on(table.action),
+  index('order_audit_trail_created_at_idx').on(table.createdAt),
   // Composite for order history queries
-  orderHistoryIdx: index('order_audit_trail_history_idx').on(table.orderId, table.createdAt)
-}));
+  index('order_audit_trail_history_idx').on(table.orderId, table.createdAt)
+]);
 
 // ============================================
 // Bulk Import/Export Tracking
@@ -302,12 +302,12 @@ export const importExportJobs = pgTable('import_export_jobs', {
   startedAt: timestamp('started_at'),
   completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  jobTypeIdx: index('import_export_jobs_type_idx').on(table.jobType),
-  statusIdx: index('import_export_jobs_status_idx').on(table.status),
-  userIdIdx: index('import_export_jobs_user_id_idx').on(table.userId),
-  createdAtIdx: index('import_export_jobs_created_at_idx').on(table.createdAt)
-}));
+}, (table) => [
+  index('import_export_jobs_type_idx').on(table.jobType),
+  index('import_export_jobs_status_idx').on(table.status),
+  index('import_export_jobs_user_id_idx').on(table.userId),
+  index('import_export_jobs_created_at_idx').on(table.createdAt)
+]);
 
 // ============================================
 // Customers Table
@@ -330,14 +330,14 @@ export const customers = pgTable('customers', {
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-}, (table) => ({
-  customerIdIdx: index('customers_customer_id_idx').on(table.customerId),
-  nameIdx: index('customers_name_idx').on(table.name),
-  emailIdx: index('customers_email_idx').on(table.email),
-  phoneIdx: index('customers_phone_idx').on(table.phone),
-  sourceIdx: index('customers_source_idx').on(table.source),
-  lastOrderDateIdx: index('customers_last_order_date_idx').on(table.lastOrderDate)
-}));
+}, (table) => [
+  index('customers_customer_id_idx').on(table.customerId),
+  index('customers_name_idx').on(table.name),
+  index('customers_email_idx').on(table.email),
+  index('customers_phone_idx').on(table.phone),
+  index('customers_source_idx').on(table.source),
+  index('customers_last_order_date_idx').on(table.lastOrderDate)
+]);
 
 // ============================================
 // Order Notes Table
@@ -356,14 +356,14 @@ export const orderNotes = pgTable('order_notes', {
   userName: text('user_name'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
-}, (table) => ({
-  orderIdIdx: index('order_notes_order_id_idx').on(table.orderId),
-  noteTypeIdx: index('order_notes_note_type_idx').on(table.noteType),
-  isPinnedIdx: index('order_notes_is_pinned_idx').on(table.isPinned),
-  createdAtIdx: index('order_notes_created_at_idx').on(table.createdAt),
+}, (table) => [
+  index('order_notes_order_id_idx').on(table.orderId),
+  index('order_notes_note_type_idx').on(table.noteType),
+  index('order_notes_is_pinned_idx').on(table.isPinned),
+  index('order_notes_created_at_idx').on(table.createdAt),
   // Composite for fetching pinned notes first, then by date
-  orderPinnedIdx: index('order_notes_order_pinned_idx').on(table.orderId, table.isPinned, table.createdAt)
-}));
+  index('order_notes_order_pinned_idx').on(table.orderId, table.isPinned, table.createdAt)
+]);
 
 // ============================================
 // Stock Transactions Table
@@ -386,11 +386,11 @@ export const stockTransactions = pgTable('stock_transactions', {
   userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
   userEmail: text('user_email'),
   createdAt: timestamp('created_at').defaultNow().notNull()
-}, (table) => ({
-  itemIdIdx: index('stock_transactions_item_id_idx').on(table.itemId),
-  transactionTypeIdx: index('stock_transactions_type_idx').on(table.transactionType),
-  referenceIdx: index('stock_transactions_reference_idx').on(table.referenceType, table.referenceId),
-  createdAtIdx: index('stock_transactions_created_at_idx').on(table.createdAt),
+}, (table) => [
+  index('stock_transactions_item_id_idx').on(table.itemId),
+  index('stock_transactions_type_idx').on(table.transactionType),
+  index('stock_transactions_reference_idx').on(table.referenceType, table.referenceId),
+  index('stock_transactions_created_at_idx').on(table.createdAt),
   // Composite for item stock history queries
-  itemHistoryIdx: index('stock_transactions_item_history_idx').on(table.itemId, table.createdAt)
-}));
+  index('stock_transactions_item_history_idx').on(table.itemId, table.createdAt)
+]);

@@ -14,14 +14,10 @@ import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Paper from '@mui/material/Paper';
-import Chip from '@mui/material/Chip';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import { useSalesTrends, type AnalyticsFilters } from '@/hooks/queries/useAdvancedAnalyticsQueries';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import StatCard from '../common/StatCard';
 
 type GroupByOption = 'day' | 'week' | 'month';
 
@@ -41,13 +37,13 @@ interface SalesTrendsProps {
  * Displays data points as a visual trend line
  */
 interface SimpleLineChartProps {
-  data: Array<{ label: string; value: number }>;
+  data: ReadonlyArray<{ label: string; value: number }>;
   height?: number;
   color?: string;
   ariaLabel: string;
 }
 
-function SimpleLineChart({ data, height = 200, color = '#1976d2', ariaLabel }: SimpleLineChartProps) {
+function SimpleLineChart({ data, height = 200, color = '#1976d2', ariaLabel }: Readonly<SimpleLineChartProps>) {
   if (data.length === 0) {
     return (
       <Box 
@@ -119,11 +115,11 @@ function SimpleLineChart({ data, height = 200, color = '#1976d2', ariaLabel }: S
           pb: 1,
         }}
       >
-        {data.map((point, index) => {
+        {data.map((point) => {
           const heightPercent = ((point.value - minValue) / range) * 100;
           return (
             <Box
-              key={index}
+              key={point.label}
               sx={{
                 flex: 1,
                 display: 'flex',
@@ -171,7 +167,7 @@ function SimpleLineChart({ data, height = 200, color = '#1976d2', ariaLabel }: S
             </Typography>
             {data.length > 1 && (
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                {data[data.length - 1].label}
+                {data.at(-1)?.label}
               </Typography>
             )}
           </>
@@ -180,8 +176,8 @@ function SimpleLineChart({ data, height = 200, color = '#1976d2', ariaLabel }: S
 
       {/* Screen reader accessible data */}
       <Box component="ul" sx={{ position: 'absolute', left: -9999 }}>
-        {data.map((point, index) => (
-          <li key={index}>{point.label}: {point.value.toLocaleString()}</li>
+        {data.map((point) => (
+          <li key={point.label}>{point.label}: {point.value.toLocaleString()}</li>
         ))}
       </Box>
     </Box>
@@ -197,7 +193,7 @@ function SalesTrends({
   initialEndDate,
   showDateFilters = true,
   externalFilters,
-}: SalesTrendsProps) {
+}: Readonly<SalesTrendsProps>) {
   const { formatPrice } = useCurrency();
   
   const [startDate, setStartDate] = useState(initialStartDate || '');
@@ -271,7 +267,7 @@ function SalesTrends({
         label = `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
       } else {
         const [year, month] = key.split('-');
-        const date = new Date(parseInt(year), parseInt(month) - 1);
+        const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1);
         label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       }
 
@@ -352,22 +348,22 @@ function SalesTrends({
               label="Start Date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              inputProps={{
-                'aria-label': 'Filter by start date',
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { 'aria-label': 'Filter by start date' },
               }}
+              size="small"
             />
             <TextField
               type="date"
               label="End Date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              size="small"
-              inputProps={{
-                'aria-label': 'Filter by end date',
+              slotProps={{
+                inputLabel: { shrink: true },
+                htmlInput: { 'aria-label': 'Filter by end date' },
               }}
+              size="small"
             />
           </>
         )}

@@ -2,8 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid2';
 import Table from '@mui/material/Table';
@@ -20,7 +18,6 @@ import Chip from '@mui/material/Chip';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import PercentIcon from '@mui/icons-material/Percent';
 import { useProfitAnalytics, type AnalyticsFilters } from '@/hooks/queries/useAdvancedAnalyticsQueries';
@@ -47,7 +44,7 @@ function ProfitAnalytics({
   initialEndDate,
   showDateFilters = true,
   externalFilters,
-}: ProfitAnalyticsProps) {
+}: Readonly<ProfitAnalyticsProps>) {
   const { formatPrice } = useCurrency();
   
   const [startDate, setStartDate] = useState(initialStartDate || '');
@@ -78,16 +75,6 @@ function ProfitAnalytics({
     if (margin < 15) return 'warning';
     if (margin >= 30) return 'success';
     return 'default';
-  };
-
-  /**
-   * Returns text color for margin display
-   */
-  const getMarginTextColor = (margin: number): string => {
-    if (margin < 0) return 'error.main';
-    if (margin < 15) return 'warning.main';
-    if (margin >= 30) return 'success.main';
-    return 'text.primary';
   };
 
   if (isLoading) {
@@ -151,22 +138,22 @@ function ProfitAnalytics({
             label="Start Date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            size="small"
-            inputProps={{
-              'aria-label': 'Filter by start date',
+            slotProps={{
+              inputLabel: { shrink: true },
+              htmlInput: { 'aria-label': 'Filter by start date' },
             }}
+            size="small"
           />
           <TextField
             type="date"
             label="End Date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            size="small"
-            inputProps={{
-              'aria-label': 'Filter by end date',
+            slotProps={{
+              inputLabel: { shrink: true },
+              htmlInput: { 'aria-label': 'Filter by end date' },
             }}
+            size="small"
           />
         </Box>
       )}
