@@ -158,3 +158,140 @@ export const digestRuns = pgTable('digest_runs', {
   sentAt: timestamp('sent_at'),
   error: text('error')
 });
+
+// ============================================
+// Item Categories & Tags System
+// ============================================
+
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  color: text('color').default('#6B7280'), // Hex color for UI display
+  parentId: integer('parent_id'),
+  displayOrder: integer('display_order').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  nameIdx: index('categories_name_idx').on(table.name),
+  parentIdIdx: index('categories_parent_id_idx').on(table.parentId)
+}));
+
+export const tags = pgTable('tags', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  color: text('color').default('#3B82F6'), // Hex color for UI display
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  nameIdx: index('tags_name_idx').on(table.name)
+}));
+
+// Junction table for item-category relationship (many-to-many)
+export const itemCategories = pgTable('item_categories', {
+  id: serial('id').primaryKey(),
+  itemId: integer('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+  categoryId: integer('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  itemIdIdx: index('item_categories_item_id_idx').on(table.itemId),
+  categoryIdIdx: index('item_categories_category_id_idx').on(table.categoryId),
+  uniqueItemCategory: index('item_categories_unique_idx').on(table.itemId, table.categoryId)
+}));
+
+// Junction table for item-tag relationship (many-to-many)
+export const itemTags = pgTable('item_tags', {
+  id: serial('id').primaryKey(),
+  itemId: integer('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+  tagId: integer('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  itemIdIdx: index('item_tags_item_id_idx').on(table.itemId),
+  tagIdIdx: index('item_tags_tag_id_idx').on(table.tagId),
+  uniqueItemTag: index('item_tags_unique_idx').on(table.itemId, table.tagId)
+}));
+
+// ============================================
+// Audit Log System
+// ============================================
+
+export const auditActionEnum = pgEnum('audit_action', [
+  'create', 'update', 'delete', 'restore', 'bulk_import', 'bulk_export'
+]);
+
+export const auditEntityEnum = pgEnum('audit_entity', [
+  'order', 'item', 'category', 'tag', 'user', 'feedback'
+]);
+
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
+  entityType: auditEntityEnum('entity_type').notNull(),
+  entityId: integer('entity_id').notNull(),
+  action: auditActionEnum('action').notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: text('user_email'), // Cached for display even if user deleted
+  userName: text('user_name'),   // Cached for display even if user deleted
+  previousData: text('previous_data'), // JSON string of old values
+  newData: text('new_data'),           // JSON string of new values
+  changedFields: text('changed_fields'), // JSON array of field names that changed
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  metadata: text('metadata'), // Additional context as JSON
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  entityTypeIdx: index('audit_logs_entity_type_idx').on(table.entityType),
+  entityIdIdx: index('audit_logs_entity_id_idx').on(table.entityId),
+  actionIdx: index('audit_logs_action_idx').on(table.action),
+  userIdIdx: index('audit_logs_user_id_idx').on(table.userId),
+  createdAtIdx: index('audit_logs_created_at_idx').on(table.createdAt),
+  // Composite index for entity lookup (most common query pattern)
+  entityLookupIdx: index('audit_logs_entity_lookup_idx').on(table.entityType, table.entityId, table.createdAt)
+}));
+
+// Order-specific audit trail with more detail
+export const orderAuditTrail = pgTable('order_audit_trail', {
+  id: serial('id').primaryKey(),
+  orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  action: text('action').notNull(), // More flexible: 'status_change', 'payment_update', 'item_added', etc.
+  fieldName: text('field_name'),    // Which field changed
+  oldValue: text('old_value'),
+  newValue: text('new_value'),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: text('user_email'),
+  userName: text('user_name'),
+  notes: text('notes'), // Optional notes explaining the change
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  orderIdIdx: index('order_audit_trail_order_id_idx').on(table.orderId),
+  actionIdx: index('order_audit_trail_action_idx').on(table.action),
+  createdAtIdx: index('order_audit_trail_created_at_idx').on(table.createdAt),
+  // Composite for order history queries
+  orderHistoryIdx: index('order_audit_trail_history_idx').on(table.orderId, table.createdAt)
+}));
+
+// ============================================
+// Bulk Import/Export Tracking
+// ============================================
+
+export const importExportJobs = pgTable('import_export_jobs', {
+  id: serial('id').primaryKey(),
+  jobType: text('job_type').notNull(), // 'import' or 'export'
+  entityType: text('entity_type').notNull(), // 'orders', 'items', etc.
+  status: text('status').notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+  fileName: text('file_name'),
+  fileUrl: text('file_url'), // For exports, the download URL
+  totalRecords: integer('total_records'),
+  processedRecords: integer('processed_records').default(0),
+  successCount: integer('success_count').default(0),
+  errorCount: integer('error_count').default(0),
+  errors: text('errors'), // JSON array of error details
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: text('user_email'),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  jobTypeIdx: index('import_export_jobs_type_idx').on(table.jobType),
+  statusIdx: index('import_export_jobs_status_idx').on(table.status),
+  userIdIdx: index('import_export_jobs_user_id_idx').on(table.userId),
+  createdAtIdx: index('import_export_jobs_created_at_idx').on(table.createdAt)
+}));

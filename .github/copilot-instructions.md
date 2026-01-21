@@ -1,191 +1,190 @@
-# API Tester - Project Instructions
+# Struffle Orders - Project Instructions
 
 ## Overview
 
-This is an API testing web application built with TanStack Start, similar to Postman but simplified. It allows users to:
+This is an order management web application built with Next.js 16 for a bakery/restaurant business. It allows users to:
 
-- Make HTTP requests with different methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
-- Configure request parameters, headers, body, and authentication
-- Organize requests into collections
-- Use environment variables with `{{variableName}}` substitution
-- View request history
-- Export/import data in native or Postman format
+- Create, manage, and track customer orders
+- Manage inventory items with designs and categories
+- View sales analytics and reports
+- Handle customer feedback
+- Bulk import/export orders
+- Track audit logs for all operations
 
 ## Tech Stack
 
-- **Framework**: TanStack Start (React 19 + TanStack Router + Vite 7)
-- **Styling**: Tailwind CSS v4
-- **Storage**: IndexedDB via `idb` library
-- **State**: React hooks + local state (no Redux/Zustand)
-- **UI Components**: Custom shadcn-style components in `src/components/ui/`
+- **Framework**: Next.js 16 (App Router, React 19)
+- **UI**: Material-UI v6 (MUI)
+- **Database**: PostgreSQL with Drizzle ORM v0.45
+- **Auth**: NextAuth.js
+- **State**: TanStack React Query v5
+- **Styling**: CSS Modules + MUI theming
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── ui/              # Base UI components (Button, Input, Tabs, Dialog, etc.)
-│   ├── shared/          # Reusable components (KeyValueTable, CodeEditor, etc.)
-│   ├── collections/     # Collection sidebar and tree components
-│   ├── request/         # Request builder components
-│   ├── response/        # Response viewer components
-│   ├── history/         # Request history components
-│   ├── environments/    # Environment variable components
-│   ├── export-import/   # Export/import dialogs
-│   └── layout/          # App layout components
-├── hooks/
-│   ├── useEnvironments.ts    # Environment state management
-│   ├── useRequest.ts         # HTTP request execution
-│   └── useRequestHistory.ts  # History management
-├── lib/
-│   ├── db/              # IndexedDB schema and CRUD operations
-│   ├── types/           # TypeScript type definitions
-│   ├── variables/       # Variable substitution logic
-│   ├── export-import/   # Export/import utilities
-│   ├── http-client.ts   # HTTP request building utilities
-│   ├── auth-helpers.ts  # Auth header builders
-│   ├── url-parser.ts    # URL parsing for auto-populating params
-│   ├── date-utils.ts    # Date formatting utilities
-│   └── utils.ts         # Tailwind class utilities
-├── server/
-│   └── functions/
-│       └── proxy.ts     # Server function to proxy requests (CORS bypass)
-└── routes/
-    ├── __root.tsx       # Root layout
-    └── index.tsx        # Main API tester page
+app/                     # Next.js App Router pages
+├── api/                 # API route handlers
+│   ├── audit-logs/      # Audit log endpoints
+│   ├── categories/      # Category CRUD endpoints
+│   ├── feedbacks/       # Customer feedback endpoints
+│   ├── items/           # Inventory item endpoints
+│   ├── orders/          # Order CRUD + import/export
+│   ├── reports/         # Report generation endpoints
+│   ├── tags/            # Tag CRUD endpoints
+│   └── users/           # User management endpoints
+├── admin/               # Admin pages
+├── dashboard/           # Dashboard page
+├── items/               # Item management pages
+├── orders/              # Order management pages
+└── sales/               # Sales analytics page
+
+components/              # React components
+├── admin/               # Admin-specific components
+│   ├── AdminPage.tsx    # Main admin page with tabs
+│   ├── CategoriesManager.tsx  # Category tree management
+│   ├── TagsManager.tsx  # Tag management with colors
+│   ├── AuditLogsViewer.tsx    # Audit log table
+│   ├── BulkOrderOperations.tsx # Import/export UI
+│   └── ExportReports.tsx      # Report generation UI
+├── analytics/           # Analytics components
+├── common/              # Shared components
+├── items/               # Item management components
+├── orders/              # Order components
+│   └── OrderAuditTrail.tsx    # Order history timeline
+
+hooks/
+├── domain/              # Domain-specific hooks
+├── queries/             # React Query hooks
+│   ├── useCategoriesQueries.ts
+│   ├── useTagsQueries.ts
+│   ├── useAuditLogsQueries.ts
+│   └── ...
+├── mutations/           # Mutation hooks
+└── utils/               # Utility hooks
+
+lib/
+├── db/                  # Database layer
+│   └── schema.ts        # Drizzle schema definitions
+├── models/              # Data models (Category, Tag, AuditLog)
+├── services/            # Business logic services
+│   ├── importExportService.ts  # Bulk import/export
+│   └── excelExportService.ts   # Report generation
+├── utils/               # Utility functions
+│   └── dateUtils.ts     # Date formatting
+└── queryKeys.ts         # React Query key definitions
+
+types/
+├── entities.ts          # TypeScript entity interfaces
+├── brandedIds.ts        # Branded ID types (OrderId, ItemId)
+└── index.ts             # Type exports
 ```
 
 ## Key Features
 
-### URL Auto-Parse
-When pasting a URL with query parameters, they are automatically extracted and populated in the Params tab.
+### Bulk Order Import/Export
+- CSV file upload with preview
+- Template download
+- Export with date range filters
+- Progress tracking via import/export jobs
 
-### Variable Substitution
-Variables use `{{variableName}}` syntax. Resolution order (highest to lowest priority):
-1. Collection variables
-2. Active environment variables
-3. Global variables
+### Item Categories & Tags
+- Hierarchical categories with parent-child relationships
+- Color-coded tags for item organization
+- Tree view for category management
 
-### Server-Side Proxy
-API requests are proxied through a TanStack Start server function (`src/server/functions/proxy.ts`) to avoid CORS issues.
+### Report Generation
+- Multiple report types: orders, sales summary, audit logs
+- Export formats: CSV, TSV, HTML, XLS
+- Date range filtering
 
-### Persistence
-- Collections, requests, environments: IndexedDB
-- History: IndexedDB (auto-pruned at 500 entries)
-- Active environment: localStorage (for quick access)
+### Audit Logs
+- Comprehensive logging of all CRUD operations
+- Entity-specific audit trails (orders, items, categories, etc.)
+- User tracking with email/name
+- Previous/new data snapshots
 
-## Development
+### Order Audit Trail
+- Timeline view of order changes
+- Shows status changes, field updates, user info
+- Visual timeline using custom Box-based layout
 
-```bash
-# Start dev server
-npm run dev
+## Database Schema
 
-# Build for production
-npm run build
+Key tables added for new features:
 
-# Run tests
-npm run test
+- `categories` - Hierarchical categories with parent_id
+- `tags` - Color-coded tags
+- `item_categories` - Many-to-many item-category junction
+- `item_tags` - Many-to-many item-tag junction
+- `audit_logs` - System-wide audit log
+- `order_audit` - Order-specific audit trail
+- `import_export_jobs` - Bulk operation tracking
+
+## API Patterns
+
+### Route Handler Structure
+```typescript
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+  // ... logic
+}
 ```
 
-## Adding New Features
-
-1. **New UI components**: Add to `src/components/ui/`, export from `index.ts`
-2. **New database operations**: Add to appropriate file in `src/lib/db/`
-3. **New types**: Add to `src/lib/types/index.ts`
-4. **New routes**: Add to `src/routes/`
+### Query Key Structure
+```typescript
+queryKeys.categories.all       // ['categories']
+queryKeys.categories.list()    // ['categories', 'list']
+queryKeys.categories.detail(1) // ['categories', 'detail', '1']
+queryKeys.auditLogs.list(filters) // ['auditLogs', 'list', filters]
+```
 
 ## Coding Conventions
 
-- Use TypeScript strictly - no `any` types
-- Prefix unused variables with underscore (`_variables`)
-- Use `cn()` utility for class name merging
-- Components are function components with explicit return types
-- Use `nanoid` for ID generation
+- Use TypeScript strictly - minimize `any` types
+- Use branded ID types (OrderId, ItemId) for type safety
+- Components use Material-UI with sx prop for styling
+- All hooks in `hooks/` directory with appropriate subdirectories
+- API routes follow RESTful conventions
+- Use `executeWithRetry` for database operations
 
-## Important Patterns
+## Recent Changes (July 2025)
 
-### SSR Safety
-All hooks that access browser-only APIs (IndexedDB, localStorage) must include SSR guards:
-```typescript
-if (typeof window === 'undefined') return
-```
+### Added Features
+1. **Bulk Order Import/Export** - `BulkOrderOperations.tsx`, `/api/orders/import`, `/api/orders/export`
+2. **Categories & Tags** - Full CRUD with tree view and color picker
+3. **Report Export** - Multi-format report generation
+4. **Audit Logs** - System-wide logging with viewer component
+5. **Order Audit Trail** - Timeline component for order history
 
-### Race Condition Prevention
-Async operations in hooks should use:
-1. `isMountedRef` to prevent setState on unmounted components
-2. `fetchIdRef` to prevent stale updates from earlier requests
+### New Components
+- `components/admin/CategoriesManager.tsx`
+- `components/admin/TagsManager.tsx`
+- `components/admin/AuditLogsViewer.tsx`
+- `components/admin/BulkOrderOperations.tsx`
+- `components/admin/ExportReports.tsx`
+- `components/orders/OrderAuditTrail.tsx`
 
-### Regex Safety
-Never use module-level regex with the `g` flag. Create new instances inside functions to avoid race conditions:
-```typescript
-// Good: Create inside function
-function extractVariables(text: string) {
-  const pattern = /\{\{([^{}]+)\}\}/g
-  // ...
-}
+### New API Routes
+- `/api/categories` (GET, POST)
+- `/api/categories/[id]` (GET, PUT, DELETE)
+- `/api/tags` (GET, POST)
+- `/api/tags/[id]` (GET, PUT, DELETE)
+- `/api/audit-logs` (GET)
+- `/api/audit-logs/recent` (GET)
+- `/api/orders/[id]/audit` (GET)
+- `/api/orders/import` (POST)
+- `/api/orders/export` (GET)
+- `/api/reports/export` (GET)
 
-// Bad: Module-level global regex
-const PATTERN = /\{\{([^{}]+)\}\}/g
-```
-
-### Variable Pattern
-The variable substitution pattern `{{variableName}}` is defined in `src/lib/variables/substitutor.ts`. Use `VARIABLE_PATTERN_STRING` for consistent regex creation across the codebase.
-
-### UTF-8 Encoding
-Use `safeBase64Encode()` from `auth-helpers.ts` instead of raw `btoa()` to handle non-ASCII characters.
-
-### Component Memoization
-For components that render in lists or trees, use `React.memo` with custom comparison functions:
-```typescript
-function propsAreEqual(
-  prevProps: Readonly<ComponentProps>,
-  nextProps: Readonly<ComponentProps>
-): boolean {
-  return (
-    prevProps.id === nextProps.id &&
-    prevProps.selected === nextProps.selected
-    // Compare relevant props only
-  )
-}
-
-export const MemoizedComponent = memo(Component, propsAreEqual)
-```
-
-### Collection Tree Virtualization
-The collection tree (`src/components/collections/CollectionTree.tsx`) uses `@tanstack/react-virtual` for large lists:
-- Virtualization activates when there are 50+ visible items
-- Tree is flattened into a single array respecting expanded/collapsed state
-- Each item tracks its depth for proper indentation
-- Use `useMemo` for computed data structures (indexed maps, flattened trees)
-
-### Shared Components
-Reusable components live in `src/components/shared/`:
-- `HighlightedInput`: Input that highlights `{{variable}}` patterns in orange
-- `KeyValueTable`: Editable table for key-value pairs
-- `CodeEditor`: Syntax-highlighted code editor
-- `MethodBadge`/`StatusBadge`: HTTP method and status indicators
-- `VariableInput`: Input with variable autocomplete
-
-### Accessibility Patterns
-All interactive elements must have accessible labels:
-```typescript
-// Use htmlFor to associate labels with inputs
-<label htmlFor="input-id">Label</label>
-<input id="input-id" />
-
-// Use sr-only for screen reader only text
-<label htmlFor="url" className="sr-only">Request URL</label>
-
-// Use aria-label for elements without visible labels
-<button aria-label="Delete row">×</button>
-
-// Use role="radiogroup" with aria-checked for button groups
-<div role="radiogroup">
-  <button role="radio" aria-checked={selected === 'a'}>A</button>
-</div>
-
-// Tables need scope and aria-label
-<table aria-label="HTTP Headers">
-  <th scope="col">Header Name</th>
-</table>
-```
+### Admin Page Tabs
+The admin page now has 6 tabs:
+1. Users - User management
+2. Categories - Category tree management
+3. Tags - Tag management
+4. Import/Export - Bulk order operations
+5. Reports - Report generation
+6. Audit Logs - System audit log viewer

@@ -15,3 +15,30 @@ export {
 
 // Analytics queries
 export { useSalesAnalyticsQuery } from './useAnalyticsQueries';
+
+// Categories queries
+export {
+  useCategories,
+  useCategoriesTree,
+  useCategory,
+  useCreateCategory,
+  useUpdateCategory,
+  useDeleteCategory,
+} from './useCategoriesQueries';
+
+// Tags queries
+export {
+  useTags,
+  useTag,
+  useCreateTag,
+  useUpdateTag,
+  useDeleteTag,
+} from './useTagsQueries';
+
+// Audit logs queries
+export {
+  useAuditLogs,
+  useRecentActivity,
+  useOrderAuditTrail,
+} from './useAuditLogsQueries';
+

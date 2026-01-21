@@ -42,4 +42,36 @@ export const queryKeys = {
 
   // Analytics
   salesAnalytics: (statusFilter: 'completed' | 'all') => ['analytics', 'sales', statusFilter] as const,
+
+  // Categories
+  categories: {
+    all: ['categories'] as const,
+    tree: ['categories', 'tree'] as const,
+    detail: (id: number | string) => ['categories', 'detail', String(id)] as const,
+    byItem: (itemId: number | string) => ['categories', 'byItem', String(itemId)] as const,
+  },
+
+  // Tags
+  tags: {
+    all: ['tags'] as const,
+    detail: (id: number | string) => ['tags', 'detail', String(id)] as const,
+    byItem: (itemId: number | string) => ['tags', 'byItem', String(itemId)] as const,
+  },
+
+  // Audit Logs
+  auditLogs: {
+    all: ['auditLogs'] as const,
+    list: (filters: Record<string, unknown>) => ['auditLogs', 'list', filters] as const,
+    recent: (hours: number) => ['auditLogs', 'recent', hours] as const,
+    byEntity: (entityType: string, entityId: number | string) => 
+      ['auditLogs', 'byEntity', entityType, String(entityId)] as const,
+    orderTrail: (orderId: number | string) => ['auditLogs', 'orderTrail', String(orderId)] as const,
+  },
+
+  // Import/Export Jobs
+  importExportJobs: {
+    all: ['importExportJobs'] as const,
+    recent: ['importExportJobs', 'recent'] as const,
+    detail: (id: number | string) => ['importExportJobs', 'detail', String(id)] as const,
+  },
 } as const;

@@ -1,4 +1,4 @@
-import type { ItemId, OrderId, OrderItemId, FeedbackId, FeedbackTokenId } from './brandedIds';
+import type { ItemId, OrderId, OrderItemId, FeedbackId, FeedbackTokenId, CategoryId, TagId, AuditLogId } from './brandedIds';
 
 // Order source enum type
 export type OrderSource = 'instagram' | 'facebook' | 'whatsapp' | 'call' | 'offline';
@@ -14,6 +14,37 @@ export type ConfirmationStatus = 'unconfirmed' | 'pending_confirmation' | 'confi
 
 // Delivery status enum type
 export type DeliveryStatus = 'not_shipped' | 'shipped' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'returned';
+
+// Audit action enum type
+export type AuditAction = 'create' | 'update' | 'delete' | 'restore' | 'bulk_import' | 'bulk_export';
+
+// Audit entity enum type
+export type AuditEntityType = 'order' | 'item' | 'category' | 'tag' | 'user' | 'feedback';
+
+// Category interface
+export interface Category {
+  id: CategoryId;
+  _id: CategoryId;
+  name: string;
+  description: string | null;
+  color: string;
+  parentId: CategoryId | null;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  children?: Category[];
+  itemCount?: number;
+}
+
+// Tag interface
+export interface Tag {
+  id: TagId;
+  _id: TagId;
+  name: string;
+  color: string;
+  createdAt: string;
+  itemCount?: number;
+}
 
 // Item Design variant
 export interface ItemDesign {
@@ -40,6 +71,8 @@ export interface Item {
   createdAt: string;
   deletedAt: string | null;
   designs?: ItemDesign[];
+  categories?: Category[];
+  tags?: Tag[];
 }
 
 export interface OrderItem {
@@ -354,4 +387,198 @@ export interface SalesAnalyticsResponse {
   analytics: Record<string, RangeAnalytics>;
   timeRanges: TimeRange[];
   generatedAt: string;
+}
+
+// ============================================
+// Audit Log Types
+// ============================================
+
+export interface AuditLog {
+  id: AuditLogId;
+  _id: AuditLogId;
+  entityType: AuditEntityType;
+  entityId: number;
+  action: AuditAction;
+  userId: number | null;
+  userEmail: string | null;
+  userName: string | null;
+  previousData: Record<string, unknown> | null;
+  newData: Record<string, unknown> | null;
+  changedFields: string[] | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface OrderAuditEntry {
+  id: number;
+  _id: number;
+  orderId: OrderId;
+  action: string;
+  fieldName: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  userId: number | null;
+  userEmail: string | null;
+  userName: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface CreateAuditLogData {
+  entityType: AuditEntityType;
+  entityId: number;
+  action: AuditAction;
+  userId?: number;
+  userEmail?: string;
+  userName?: string;
+  previousData?: Record<string, unknown>;
+  newData?: Record<string, unknown>;
+  changedFields?: string[];
+  ipAddress?: string;
+  userAgent?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CreateOrderAuditData {
+  orderId: number;
+  action: string;
+  fieldName?: string;
+  oldValue?: string;
+  newValue?: string;
+  userId?: number;
+  userEmail?: string;
+  userName?: string;
+  notes?: string;
+}
+
+// ============================================
+// Category & Tag Types
+// ============================================
+
+export interface CreateCategoryData {
+  name: string;
+  description?: string;
+  color?: string;
+  parentId?: number;
+  displayOrder?: number;
+}
+
+export interface UpdateCategoryData {
+  name?: string;
+  description?: string;
+  color?: string;
+  parentId?: number | null;
+  displayOrder?: number;
+}
+
+export interface CreateTagData {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTagData {
+  name?: string;
+  color?: string;
+}
+
+// ============================================
+// Bulk Import/Export Types
+// ============================================
+
+export type ImportExportJobType = 'import' | 'export';
+export type ImportExportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface ImportExportJob {
+  id: number;
+  _id: number;
+  jobType: ImportExportJobType;
+  entityType: string;
+  status: ImportExportJobStatus;
+  fileName: string | null;
+  fileUrl: string | null;
+  totalRecords: number | null;
+  processedRecords: number;
+  successCount: number;
+  errorCount: number;
+  errors: ImportError[] | null;
+  userId: number | null;
+  userEmail: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface ImportError {
+  row: number;
+  field?: string;
+  message: string;
+  data?: Record<string, unknown>;
+}
+
+export interface BulkOrderImportData {
+  orderFrom: OrderSource;
+  customerName: string;
+  customerId: string;
+  address?: string;
+  orderDate?: string;
+  expectedDeliveryDate?: string;
+  paymentStatus?: PaymentStatus;
+  paidAmount?: number;
+  confirmationStatus?: ConfirmationStatus;
+  customerNotes?: string;
+  priority?: number;
+  items: Array<{
+    itemName: string;
+    itemId?: number;
+    price: number;
+    quantity: number;
+    customizationRequest?: string;
+  }>;
+}
+
+export interface OrderExportData {
+  orderId: string;
+  orderFrom: OrderSource;
+  customerName: string;
+  customerId: string;
+  address: string;
+  totalPrice: number;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paidAmount: number;
+  confirmationStatus: ConfirmationStatus;
+  customerNotes: string;
+  priority: number;
+  orderDate: string | null;
+  expectedDeliveryDate: string | null;
+  deliveryStatus: DeliveryStatus;
+  trackingId: string;
+  deliveryPartner: string;
+  actualDeliveryDate: string | null;
+  createdAt: string;
+  itemCount: number;
+  items: string; // Semicolon-separated item names with quantities
+}
+
+// ============================================
+// Report Export Types
+// ============================================
+
+export interface ExportReportOptions {
+  format: 'xlsx' | 'csv';
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  filters?: Record<string, unknown>;
+  columns?: string[];
+}
+
+export interface ReportColumn {
+  key: string;
+  header: string;
+  width?: number;
+  format?: 'text' | 'number' | 'currency' | 'date' | 'datetime';
 }

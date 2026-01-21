@@ -12,6 +12,9 @@ export type OrderId = Brand<number, 'OrderId'>;
 export type OrderItemId = Brand<number, 'OrderItemId'>;
 export type FeedbackId = Brand<number, 'FeedbackId'>;
 export type FeedbackTokenId = Brand<number, 'FeedbackTokenId'>;
+export type CategoryId = Brand<number, 'CategoryId'>;
+export type TagId = Brand<number, 'TagId'>;
+export type AuditLogId = Brand<number, 'AuditLogId'>;
 
 // Helper functions to create branded IDs
 export function createItemId(id: number): ItemId {
@@ -32,6 +35,18 @@ export function createFeedbackId(id: number): FeedbackId {
 
 export function createFeedbackTokenId(id: number): FeedbackTokenId {
   return id as FeedbackTokenId;
+}
+
+export function createCategoryId(id: number): CategoryId {
+  return id as CategoryId;
+}
+
+export function createTagId(id: number): TagId {
+  return id as TagId;
+}
+
+export function createAuditLogId(id: number): AuditLogId {
+  return id as AuditLogId;
 }
 
 // Type guard functions
@@ -56,4 +71,22 @@ export function parseFeedbackId(value: string | number): FeedbackId | null {
   const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
   if (Number.isNaN(numericId) || numericId <= 0) return null;
   return createFeedbackId(numericId);
+}
+
+export function parseCategoryId(value: string | number): CategoryId | null {
+  const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
+  if (Number.isNaN(numericId) || numericId <= 0) return null;
+  return createCategoryId(numericId);
+}
+
+export function parseTagId(value: string | number): TagId | null {
+  const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
+  if (Number.isNaN(numericId) || numericId <= 0) return null;
+  return createTagId(numericId);
+}
+
+export function parseAuditLogId(value: string | number): AuditLogId | null {
+  const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
+  if (Number.isNaN(numericId) || numericId <= 0) return null;
+  return createAuditLogId(numericId);
 }
