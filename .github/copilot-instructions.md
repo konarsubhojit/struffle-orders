@@ -1,292 +1,191 @@
-# Copilot Instructions
+# API Tester - Project Instructions
 
-## Project Overview
+## Overview
 
-This is an **Order Management System** - a full-stack application for managing orders with a React frontend and Node.js/PostgreSQL backend.
+This is an API testing web application built with TanStack Start, similar to Postman but simplified. It allows users to:
 
-### Key Features
-- Order Management: Create orders with customer information and multiple items
-- Item Management: Add and manage items with name and price
-- Order Tracking: Auto-generated order IDs and total price calculation
-- Order History: View all past orders
-- Authentication: Google OAuth with JWT tokens
-- Delivery Tracking: Track shipments with status, AWB numbers, and delivery partners
-- Priority Dashboard: Visual indicators for urgent orders based on delivery dates
-- Sales Reports: Analyze sales by time, customer, and source
-- Image Upload: Vercel Blob Storage for item images
-- Soft Delete: Restore accidentally deleted items
-- Multi-Currency: Support for multiple currencies (USD, EUR, GBP, INR)
+- Make HTTP requests with different methods (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
+- Configure request parameters, headers, body, and authentication
+- Organize requests into collections
+- Use environment variables with `{{variableName}}` substitution
+- View request history
+- Export/import data in native or Postman format
 
 ## Tech Stack
 
-- **Frontend**: React 19 with Vite and Material-UI (MUI) v6
-- **Backend**: Node.js with Express
-- **Database**: Neon PostgreSQL (serverless) with Drizzle ORM
-- **Authentication**: Google OAuth with JWT
-- **Image Storage**: Vercel Blob Storage
-- **Testing**: Jest (backend), Vitest (frontend)
-- **Linting**: ESLint
-- **Navigation**: State-based tab navigation (no React Router - Vercel compatible)
+- **Framework**: TanStack Start (React 19 + TanStack Router + Vite 7)
+- **Styling**: Tailwind CSS v4
+- **Storage**: IndexedDB via `idb` library
+- **State**: React hooks + local state (no Redux/Zustand)
+- **UI Components**: Custom shadcn-style components in `src/components/ui/`
 
 ## Project Structure
 
 ```
-├── backend/           # Node.js/Express API server
-│   ├── db/            # Database connection and schema (Drizzle ORM)
-│   ├── models/        # Data models with Drizzle queries (Item.js, Order.js)
-│   ├── routes/        # Express routes (items.js, orders.js)
-│   ├── middleware/    # Authentication and other middleware
-│   ├── constants/     # Shared constants
-│   ├── utils/         # Utility functions (logger, etc.)
-│   ├── __tests__/     # Jest test files
-│   ├── server.js      # Main server entry point
-│   └── package.json
-├── frontend/          # React/Vite application
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── services/    # API service layer
-│   │   ├── hooks/       # Custom React hooks
-│   │   ├── contexts/    # React Context providers (Auth, Currency, Notification)
-│   │   ├── config/      # Configuration files
-│   │   ├── test/        # Vitest test files
-│   │   ├── utils/       # Utility functions
-│   │   ├── App.tsx      # Main App component (state-based navigation)
-│   │   └── main.tsx     # Entry point
-│   └── package.json
-└── package.json       # Root package.json with workspace scripts
+src/
+├── components/
+│   ├── ui/              # Base UI components (Button, Input, Tabs, Dialog, etc.)
+│   ├── shared/          # Reusable components (KeyValueTable, CodeEditor, etc.)
+│   ├── collections/     # Collection sidebar and tree components
+│   ├── request/         # Request builder components
+│   ├── response/        # Response viewer components
+│   ├── history/         # Request history components
+│   ├── environments/    # Environment variable components
+│   ├── export-import/   # Export/import dialogs
+│   └── layout/          # App layout components
+├── hooks/
+│   ├── useEnvironments.ts    # Environment state management
+│   ├── useRequest.ts         # HTTP request execution
+│   └── useRequestHistory.ts  # History management
+├── lib/
+│   ├── db/              # IndexedDB schema and CRUD operations
+│   ├── types/           # TypeScript type definitions
+│   ├── variables/       # Variable substitution logic
+│   ├── export-import/   # Export/import utilities
+│   ├── http-client.ts   # HTTP request building utilities
+│   ├── auth-helpers.ts  # Auth header builders
+│   ├── url-parser.ts    # URL parsing for auto-populating params
+│   ├── date-utils.ts    # Date formatting utilities
+│   └── utils.ts         # Tailwind class utilities
+├── server/
+│   └── functions/
+│       └── proxy.ts     # Server function to proxy requests (CORS bypass)
+└── routes/
+    ├── __root.tsx       # Root layout
+    └── index.tsx        # Main API tester page
 ```
 
-## Development Commands
+## Key Features
 
-### Installation
+### URL Auto-Parse
+When pasting a URL with query parameters, they are automatically extracted and populated in the Params tab.
+
+### Variable Substitution
+Variables use `{{variableName}}` syntax. Resolution order (highest to lowest priority):
+1. Collection variables
+2. Active environment variables
+3. Global variables
+
+### Server-Side Proxy
+API requests are proxied through a TanStack Start server function (`src/server/functions/proxy.ts`) to avoid CORS issues.
+
+### Persistence
+- Collections, requests, environments: IndexedDB
+- History: IndexedDB (auto-pruned at 500 entries)
+- Active environment: localStorage (for quick access)
+
+## Development
+
 ```bash
-# Install all dependencies (both frontend and backend)
-npm run install:all
+# Start dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Run tests
+npm run test
 ```
 
-### Running the Application
-```bash
-# Start the backend server (runs on http://localhost:5000)
-npm run backend
+## Adding New Features
 
-# Start the frontend dev server (runs on http://localhost:5173)
-npm run frontend
+1. **New UI components**: Add to `src/components/ui/`, export from `index.ts`
+2. **New database operations**: Add to appropriate file in `src/lib/db/`
+3. **New types**: Add to `src/lib/types/index.ts`
+4. **New routes**: Add to `src/routes/`
+
+## Coding Conventions
+
+- Use TypeScript strictly - no `any` types
+- Prefix unused variables with underscore (`_variables`)
+- Use `cn()` utility for class name merging
+- Components are function components with explicit return types
+- Use `nanoid` for ID generation
+
+## Important Patterns
+
+### SSR Safety
+All hooks that access browser-only APIs (IndexedDB, localStorage) must include SSR guards:
+```typescript
+if (typeof window === 'undefined') return
 ```
 
-### Guest Mode for Development/Screenshots
-The application includes a **Guest Mode** feature that allows you to view the UI without making real API calls. This is useful for:
-- Taking screenshots during development
-- Testing UI/UX without a backend connection
-- Demonstrating the interface to stakeholders
+### Race Condition Prevention
+Async operations in hooks should use:
+1. `isMountedRef` to prevent setState on unmounted components
+2. `fetchIdRef` to prevent stale updates from earlier requests
 
-To enable Guest Mode:
-1. Start the frontend dev server: `npm run frontend`
-2. Navigate to `http://localhost:5173`
-3. Click the **"Continue as Guest (View Only)"** button on the login page
-4. You can now browse the UI without authentication or API calls
+### Regex Safety
+Never use module-level regex with the `g` flag. Create new instances inside functions to avoid race conditions:
+```typescript
+// Good: Create inside function
+function extractVariables(text: string) {
+  const pattern = /\{\{([^{}]+)\}\}/g
+  // ...
+}
 
-**Note**: In Guest Mode, all API calls are intercepted and return empty data, so you'll see empty lists and forms but can still navigate the interface.
-
-### Frontend Commands
-```bash
-cd frontend
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run lint     # Run ESLint
-npm run preview  # Preview production build
-npm test         # Run tests with Vitest
-npm run test:coverage  # Run tests with coverage
+// Bad: Module-level global regex
+const PATTERN = /\{\{([^{}]+)\}\}/g
 ```
 
-### Backend Commands
-```bash
-cd backend
-npm start        # Start the server
-npm run dev      # Start the server (same as npm start)
-npm test         # Run tests with Jest
-npm run test:coverage  # Run tests with coverage
+### Variable Pattern
+The variable substitution pattern `{{variableName}}` is defined in `src/lib/variables/substitutor.ts`. Use `VARIABLE_PATTERN_STRING` for consistent regex creation across the codebase.
+
+### UTF-8 Encoding
+Use `safeBase64Encode()` from `auth-helpers.ts` instead of raw `btoa()` to handle non-ASCII characters.
+
+### Component Memoization
+For components that render in lists or trees, use `React.memo` with custom comparison functions:
+```typescript
+function propsAreEqual(
+  prevProps: Readonly<ComponentProps>,
+  nextProps: Readonly<ComponentProps>
+): boolean {
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected
+    // Compare relevant props only
+  )
+}
+
+export const MemoizedComponent = memo(Component, propsAreEqual)
 ```
 
-## Code Style Guidelines
+### Collection Tree Virtualization
+The collection tree (`src/components/collections/CollectionTree.tsx`) uses `@tanstack/react-virtual` for large lists:
+- Virtualization activates when there are 50+ visible items
+- Tree is flattened into a single array respecting expanded/collapsed state
+- Each item tracks its depth for proper indentation
+- Use `useMemo` for computed data structures (indexed maps, flattened trees)
 
-### JavaScript/React
-- Use ES modules (`import`/`export`)
-- Use functional React components with hooks
-- Use `.jsx` extension for React components
-- Follow ESLint rules configured in `frontend/eslint.config.js`
-- Use Material-UI (MUI) components for UI elements
+### Shared Components
+Reusable components live in `src/components/shared/`:
+- `HighlightedInput`: Input that highlights `{{variable}}` patterns in orange
+- `KeyValueTable`: Editable table for key-value pairs
+- `CodeEditor`: Syntax-highlighted code editor
+- `MethodBadge`/`StatusBadge`: HTTP method and status indicators
+- `VariableInput`: Input with variable autocomplete
 
-### Backend
-- Use Express for routing
-- Use Drizzle ORM for PostgreSQL interactions
-- Keep routes in separate files under `backend/routes/`
-- Keep models in separate files under `backend/models/`
-- Database schema defined in `backend/db/schema.js`
-- Use structured logging via `backend/utils/logger.js`
+### Accessibility Patterns
+All interactive elements must have accessible labels:
+```typescript
+// Use htmlFor to associate labels with inputs
+<label htmlFor="input-id">Label</label>
+<input id="input-id" />
 
-### General
-- Write self explanatory code, human-readable. Don't add inline comments to explain. If you need comments to explain code then refactor to simplify.
-- Use meaningful variable and function names
-- Keep functions small and focused
-- Add appropriate error handling
-- Use async/await for asynchronous operations
+// Use sr-only for screen reader only text
+<label htmlFor="url" className="sr-only">Request URL</label>
 
-## API Endpoints
+// Use aria-label for elements without visible labels
+<button aria-label="Delete row">×</button>
 
-### Items
-- `GET /api/items` - Get all items (with pagination support)
-- `GET /api/items/deleted` - Get soft-deleted items (with pagination)
-- `POST /api/items` - Create a new item (multipart/form-data for image upload)
-- `PUT /api/items/:id` - Update an item
-- `DELETE /api/items/:id` - Soft delete an item
-- `POST /api/items/:id/restore` - Restore a soft-deleted item
-- `DELETE /api/items/:id/permanent` - Permanently remove image from soft-deleted item
+// Use role="radiogroup" with aria-checked for button groups
+<div role="radiogroup">
+  <button role="radio" aria-checked={selected === 'a'}>A</button>
+</div>
 
-### Orders
-- `GET /api/orders` - Get all orders (with pagination support)
-- `GET /api/orders/priority` - Get priority orders based on delivery dates
-- `POST /api/orders` - Create a new order
-- `GET /api/orders/:id` - Get a specific order
-- `PUT /api/orders/:id` - Update an order
-
-### Health
-- `GET /api/health` - Health check endpoint (no authentication required)
-
-## Environment Variables
-
-The backend requires a `.env` file with:
-- `NEON_DATABASE_URL` - Neon PostgreSQL connection string
-- `PORT` - Server port (default: 5000)
-- `GOOGLE_CLIENT_ID` - Google OAuth client ID
-- `BLOB_READ_WRITE_TOKEN` - Vercel Blob Storage token for image uploads
-- `AUTH_DISABLED` - Set to 'true' to disable authentication in development (optional)
-
-The frontend requires a `.env` file with:
-- `VITE_API_URL` - Backend API URL (default: http://localhost:5000/api)
-- `VITE_GOOGLE_CLIENT_ID` - Google OAuth client ID
-
-Copy `backend/.env.example` to `backend/.env` and configure appropriately.
-Copy `frontend/.env.example` to `frontend/.env` and configure appropriately.
-
-## Authentication
-
-The application uses Google OAuth for authentication:
-- All API endpoints except `/api/health` require authentication
-- Authentication is handled via JWT tokens in the Authorization header
-- Frontend uses `@react-oauth/google` for OAuth integration
-- Backend uses `express-oauth2-jwt-bearer` for JWT validation
-- For development, set `AUTH_DISABLED=true` in backend `.env` to bypass authentication
-- Guest mode is available in the frontend for view-only access without authentication
-
-## Testing
-
-When adding new features:
-- Write tests for new functionality
-- Backend: Use Jest for unit and integration tests (`npm test`)
-- Frontend: Use Vitest with React Testing Library (`npm test`)
-- Ensure the application builds without errors
-- Run linting before committing: `cd frontend && npm run lint`
-- Manually test the feature in the browser
-- Test API endpoints with appropriate HTTP methods
-- Run tests with coverage to ensure adequate test coverage
-- Always use sonarqube MCP to review code changes and fix them
-
-## Pre-Commit Checklist
-
-**ALWAYS run these commands locally before committing to prevent CI/CD pipeline failures:**
-
-### 1. Install Dependencies (if not already installed)
-```bash
-npm run install:all
+// Tables need scope and aria-label
+<table aria-label="HTTP Headers">
+  <th scope="col">Header Name</th>
+</table>
 ```
-
-### 2. Frontend Checks
-```bash
-# Lint the frontend code
-cd frontend && npm run lint
-
-# Build the frontend
-cd frontend && npm run build
-
-# Run frontend tests
-cd frontend && npm test
-
-# Type checking
-cd frontend && npm run typecheck
-```
-
-### 3. Backend Checks
-```bash
-# Run backend tests
-cd backend && npm test
-```
-
-### 4. Customer Feedback App Checks
-```bash
-# Install dependencies (if not already installed)
-cd customer-feedback-app && npm install
-
-# Build the customer feedback app
-cd customer-feedback-app && npm run build
-
-# Run customer feedback app tests
-cd customer-feedback-app && npm test
-```
-
-### Quick Command Summary from Root
-```bash
-# Lint frontend
-cd frontend && npm run lint && cd ..
-
-# Build frontend
-cd frontend && npm run build && cd ..
-
-# Test frontend
-cd frontend && npm test && cd ..
-
-# Test backend
-cd backend && npm test && cd ..
-
-# Build customer feedback app
-cd customer-feedback-app && npm run build && cd ..
-```
-
-**Note**: Running these checks locally saves time and prevents pipeline failures. The CI/CD pipeline runs the same checks automatically.
-
-## Common Tasks
-
-### Adding a New React Component
-1. Create the component file in `frontend/src/components/`
-2. Use the `.jsx` extension
-3. Export the component as default or named export
-4. Import and use in parent components
-
-### Adding a New API Endpoint
-1. Add the route handler in the appropriate file under `backend/routes/`
-2. If needed, create or update models in `backend/models/`
-3. Register routes in `backend/server.js` if it's a new route file
-4. Update constants in `backend/constants/` if needed
-5. Add validation logic following existing patterns
-6. Write tests in `backend/__tests__/routes/`
-7. Update API service in `frontend/src/services/api.js`
-
-### Adding a New Data Model
-1. Define the schema using Drizzle ORM in `backend/db/schema.js`
-2. Create the model file in `backend/models/`
-3. Implement CRUD operations using Drizzle queries
-4. Export the model methods
-5. Add tests in `backend/__tests__/models/`
-
-### Working with Custom Hooks
-1. Create hooks in `frontend/src/hooks/`
-2. Extract complex component logic into custom hooks
-3. Use hooks for data fetching, form handling, and state management
-4. Export hooks from `frontend/src/hooks/index.js`
-5. Write tests in `frontend/src/test/hooks/`
-
-### Working with Context
-1. Create context providers in `frontend/src/contexts/`
-2. Use for global state (authentication, notifications, currency)
-3. Wrap components with providers in App.jsx
-4. Access context using `useContext` hook
-5. Write tests for context providers
