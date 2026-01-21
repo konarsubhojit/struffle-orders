@@ -23,3 +23,5 @@ export { default as FeedbackPanel } from './analytics/FeedbackPanel';
 export { default as FeedbackDialog } from './analytics/FeedbackDialog';
 export { default as PriorityNotificationPanel } from './analytics/PriorityNotificationPanel';
 
+// Customer components
+export { CustomerManager, CustomerDialog, CustomerAutocomplete } from './customers';

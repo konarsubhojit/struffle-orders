@@ -16,6 +16,19 @@ export {
 // Analytics queries
 export { useSalesAnalyticsQuery } from './useAnalyticsQueries';
 
+// Advanced Analytics queries
+export {
+  useProfitAnalytics,
+  useSalesTrends,
+  useTopItems,
+  useTopCustomers,
+  type AnalyticsFilters,
+  type ProfitAnalyticsResponse,
+  type SalesTrendsResponse,
+  type TopItemsResponse,
+  type TopCustomersResponse,
+} from './useAdvancedAnalyticsQueries';
+
 // Categories queries
 export {
   useCategories,
@@ -41,4 +54,47 @@ export {
   useRecentActivity,
   useOrderAuditTrail,
 } from './useAuditLogsQueries';
+
+// Order Notes queries
+export {
+  useOrderNotes,
+  useCreateOrderNote,
+  useUpdateOrderNote,
+  useDeleteOrderNote,
+  usePinOrderNote,
+} from './useOrderNotesQueries';
+
+// Customers queries
+export {
+  useCustomers,
+  useCustomer,
+  useCustomerSearch,
+  useCustomerOrders,
+  useCreateCustomer,
+  useUpdateCustomer,
+  useDeleteCustomer,
+  type CustomerFilters,
+} from './useCustomersQueries';
+
+// Stock queries
+export {
+  useItemStock,
+  useStockInventory,
+  useLowStockItems,
+  useStockHistory,
+  useAdjustStock,
+  useBulkAdjustStock,
+  type StockFilters,
+  type StockAdjustmentData,
+  type BulkStockAdjustmentData,
+} from './useStockQueries';
+
+// Bulk Order queries
+export {
+  useBulkUpdateOrders,
+  useBulkDeleteOrders,
+  type BulkUpdateOrdersData,
+  type BulkDeleteOrdersData,
+  type BulkOperationResult,
+} from './useBulkOrderQueries';
 

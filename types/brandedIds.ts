@@ -15,6 +15,9 @@ export type FeedbackTokenId = Brand<number, 'FeedbackTokenId'>;
 export type CategoryId = Brand<number, 'CategoryId'>;
 export type TagId = Brand<number, 'TagId'>;
 export type AuditLogId = Brand<number, 'AuditLogId'>;
+export type OrderNoteId = Brand<number, 'OrderNoteId'>;
+export type CustomerId = Brand<number, 'CustomerId'>;
+export type StockTransactionId = Brand<number, 'StockTransactionId'>;
 
 // Helper functions to create branded IDs
 export function createItemId(id: number): ItemId {
@@ -47,6 +50,18 @@ export function createTagId(id: number): TagId {
 
 export function createAuditLogId(id: number): AuditLogId {
   return id as AuditLogId;
+}
+
+export function createOrderNoteId(id: number): OrderNoteId {
+  return id as OrderNoteId;
+}
+
+export function createCustomerId(id: number): CustomerId {
+  return id as CustomerId;
+}
+
+export function createStockTransactionId(id: number): StockTransactionId {
+  return id as StockTransactionId;
 }
 
 // Type guard functions
@@ -89,4 +104,22 @@ export function parseAuditLogId(value: string | number): AuditLogId | null {
   const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
   if (Number.isNaN(numericId) || numericId <= 0) return null;
   return createAuditLogId(numericId);
+}
+
+export function parseOrderNoteId(value: string | number): OrderNoteId | null {
+  const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
+  if (Number.isNaN(numericId) || numericId <= 0) return null;
+  return createOrderNoteId(numericId);
+}
+
+export function parseCustomerId(value: string | number): CustomerId | null {
+  const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
+  if (Number.isNaN(numericId) || numericId <= 0) return null;
+  return createCustomerId(numericId);
+}
+
+export function parseStockTransactionId(value: string | number): StockTransactionId | null {
+  const numericId = typeof value === 'string' ? Number.parseInt(value, 10) : value;
+  if (Number.isNaN(numericId) || numericId <= 0) return null;
+  return createStockTransactionId(numericId);
 }

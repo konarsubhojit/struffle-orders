@@ -1,4 +1,4 @@
-import type { ItemId, OrderId, OrderItemId, FeedbackId, FeedbackTokenId, CategoryId, TagId, AuditLogId } from './brandedIds';
+import type { ItemId, OrderId, OrderItemId, FeedbackId, FeedbackTokenId, CategoryId, TagId, AuditLogId, OrderNoteId, CustomerId, StockTransactionId } from './brandedIds';
 
 // Order source enum type
 export type OrderSource = 'instagram' | 'facebook' | 'whatsapp' | 'call' | 'offline';
@@ -16,7 +16,7 @@ export type ConfirmationStatus = 'unconfirmed' | 'pending_confirmation' | 'confi
 export type DeliveryStatus = 'not_shipped' | 'shipped' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'returned';
 
 // Audit action enum type
-export type AuditAction = 'create' | 'update' | 'delete' | 'restore' | 'bulk_import' | 'bulk_export';
+export type AuditAction = 'create' | 'update' | 'delete' | 'restore' | 'bulk_import' | 'bulk_export' | 'bulk_update' | 'bulk_delete';
 
 // Audit entity enum type
 export type AuditEntityType = 'order' | 'item' | 'category' | 'tag' | 'user' | 'feedback';
@@ -73,6 +73,14 @@ export interface Item {
   designs?: ItemDesign[];
   categories?: Category[];
   tags?: Tag[];
+  // Stock tracking fields
+  stockQuantity: number;
+  lowStockThreshold: number;
+  trackStock: boolean;
+  // Cost/supplier fields
+  costPrice: number | null;
+  supplierName: string | null;
+  supplierSku: string | null;
 }
 
 export interface OrderItem {
@@ -581,4 +589,136 @@ export interface ReportColumn {
   header: string;
   width?: number;
   format?: 'text' | 'number' | 'currency' | 'date' | 'datetime';
+}
+
+// ============================================
+// Order Note Types
+// ============================================
+
+export type OrderNoteType = 'internal' | 'customer' | 'system';
+
+export interface OrderNote {
+  id: OrderNoteId;
+  _id: OrderNoteId;
+  orderId: OrderId;
+  noteText: string;
+  noteType: OrderNoteType;
+  isPinned: boolean;
+  userId: number | null;
+  userEmail: string | null;
+  userName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrderNoteData {
+  orderId: OrderId | number;
+  noteText: string;
+  noteType: OrderNoteType;
+  isPinned?: boolean;
+}
+
+// ============================================
+// Customer Types
+// ============================================
+
+export type CustomerSource = 'walk-in' | 'online' | 'referral' | 'other';
+
+export interface Customer {
+  id: CustomerId;
+  _id: CustomerId;
+  customerId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  source: CustomerSource;
+  totalOrders: number;
+  totalSpent: number;
+  firstOrderDate: string | null;
+  lastOrderDate: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerSummary {
+  id: CustomerId;
+  customerId: string;
+  name: string;
+  phone: string | null;
+}
+
+export interface CreateCustomerData {
+  customerId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  source?: CustomerSource;
+  notes?: string;
+}
+
+export interface UpdateCustomerData {
+  customerId?: string;
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  source?: CustomerSource;
+  notes?: string | null;
+}
+
+// ============================================
+// Stock Tracking Types
+// ============================================
+
+export type StockTransactionType = 'order_placed' | 'order_cancelled' | 'adjustment' | 'restock' | 'return';
+
+export interface StockTransaction {
+  id: StockTransactionId;
+  _id: StockTransactionId;
+  itemId: ItemId;
+  transactionType: StockTransactionType;
+  quantity: number;
+  previousStock: number;
+  newStock: number;
+  referenceType: string | null;
+  referenceId: number | null;
+  notes: string | null;
+  userId: number | null;
+  userEmail: string | null;
+  createdAt: string;
+}
+
+export interface StockInfo {
+  itemId: ItemId;
+  itemName: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  trackStock: boolean;
+  isLowStock: boolean;
+}
+
+// ============================================
+// Profit Summary Types
+// ============================================
+
+export interface ProfitSummary {
+  totalRevenue: number;
+  totalCost: number;
+  grossProfit: number;
+  profitMargin: number;
+}
+
+// ============================================
+// Bulk Operations Types
+// ============================================
+
+export interface BulkUpdateOrdersData {
+  orderIds: OrderId[];
+  updates: {
+    status?: OrderStatus;
+    paymentStatus?: PaymentStatus;
+  };
 }

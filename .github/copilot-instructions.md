@@ -151,40 +151,68 @@ queryKeys.auditLogs.list(filters) // ['auditLogs', 'list', filters]
 - API routes follow RESTful conventions
 - Use `executeWithRetry` for database operations
 
-## Recent Changes (July 2025)
+## Recent Changes (January 2026)
 
-### Added Features
-1. **Bulk Order Import/Export** - `BulkOrderOperations.tsx`, `/api/orders/import`, `/api/orders/export`
-2. **Categories & Tags** - Full CRUD with tree view and color picker
-3. **Report Export** - Multi-format report generation
-4. **Audit Logs** - System-wide logging with viewer component
-5. **Order Audit Trail** - Timeline component for order history
+### New Features Added
+1. **Bulk Order Operations** - `/api/orders/bulk-update`, `/api/orders/bulk-delete`
+2. **Order Notes/Timeline** - `OrderNotesPanel.tsx`, `/api/orders/[id]/notes`
+3. **Customer CRM** - Full customer management with autocomplete
+4. **Stock/Inventory Management** - Quantity tracking, low stock alerts
+5. **Profit Margin Tracking** - Cost tracking and margin analytics
+6. **Advanced Analytics** - Trends, top items, top customers, profit analysis
 
-### New Components
-- `components/admin/CategoriesManager.tsx`
-- `components/admin/TagsManager.tsx`
-- `components/admin/AuditLogsViewer.tsx`
-- `components/admin/BulkOrderOperations.tsx`
-- `components/admin/ExportReports.tsx`
-- `components/orders/OrderAuditTrail.tsx`
+### New Database Tables
+- `customers` - Customer CRM with contact info, order stats
+- `order_notes` - Internal/customer/system notes per order
+- `stock_transactions` - Stock movement history
+
+### New Columns on Existing Tables
+- `items`: stockQuantity, lowStockThreshold, trackStock, costPrice, supplierName, supplierSku
+- `order_items`: costPrice (snapshot at order time)
+- `orders`: customerIdRef (FK to customers)
 
 ### New API Routes
-- `/api/categories` (GET, POST)
-- `/api/categories/[id]` (GET, PUT, DELETE)
-- `/api/tags` (GET, POST)
-- `/api/tags/[id]` (GET, PUT, DELETE)
-- `/api/audit-logs` (GET)
-- `/api/audit-logs/recent` (GET)
-- `/api/orders/[id]/audit` (GET)
-- `/api/orders/import` (POST)
-- `/api/orders/export` (GET)
-- `/api/reports/export` (GET)
+- `/api/orders/bulk-update` (POST) - Bulk status/payment update
+- `/api/orders/bulk-delete` (POST) - Bulk soft/hard delete
+- `/api/orders/[id]/notes` (GET, POST) - Order notes CRUD
+- `/api/orders/[id]/notes/[noteId]` (GET, PUT, DELETE)
+- `/api/customers` (GET, POST) - Customer list/create
+- `/api/customers/[id]` (GET, PUT, DELETE)
+- `/api/customers/search` (GET) - Autocomplete search
+- `/api/customers/[id]/orders` (GET) - Customer order history
+- `/api/stock` (GET) - Inventory with stock info
+- `/api/stock/low` (GET) - Low stock alerts
+- `/api/items/[id]/stock` (GET, POST) - Item stock info/adjustment
+- `/api/items/[id]/stock/history` (GET) - Stock transaction history
+- `/api/analytics/profit` (GET) - Profit margin analytics
+- `/api/analytics/trends` (GET) - Sales trends by day/week/month
+- `/api/analytics/top-items` (GET) - Top selling items
+- `/api/analytics/top-customers` (GET) - Top customers
 
-### Admin Page Tabs
-The admin page now has 6 tabs:
-1. Users - User management
-2. Categories - Category tree management
-3. Tags - Tag management
-4. Import/Export - Bulk order operations
-5. Reports - Report generation
-6. Audit Logs - System audit log viewer
+### New Components
+- `components/orders/OrderNotesPanel.tsx` - Notes management
+- `components/orders/BulkOrderToolbar.tsx` - Bulk operations UI
+- `components/customers/CustomerManager.tsx` - Customer list page
+- `components/customers/CustomerDialog.tsx` - Create/edit customer
+- `components/customers/CustomerAutocomplete.tsx` - Search autocomplete
+- `components/inventory/StockManager.tsx` - Inventory management
+- `components/inventory/StockAdjustmentDialog.tsx` - Stock adjustment
+- `components/inventory/LowStockAlert.tsx` - Dashboard alert
+- `components/inventory/StockHistoryDialog.tsx` - Transaction history
+- `components/analytics/ProfitAnalytics.tsx` - Profit margins
+- `components/analytics/SalesTrends.tsx` - Trend charts
+- `components/analytics/TopItemsChart.tsx` - Top items
+- `components/analytics/TopCustomersChart.tsx` - Top customers
+- `components/analytics/AnalyticsDashboard.tsx` - Combined dashboard
+
+### New Models
+- `lib/models/OrderNote.ts` - Order notes CRUD
+- `lib/models/Customer.ts` - Customer CRM operations
+- `lib/models/Stock.ts` - Stock management
+
+### New React Query Hooks
+- `useOrderNotesQueries.ts` - Order notes hooks
+- `useCustomersQueries.ts` - Customer CRM hooks
+- `useStockQueries.ts` - Stock/inventory hooks
+- `useBulkOrderQueries.ts` - Bulk operations hooks
+- `useAnalyticsQueries.ts` - Advanced analytics hooks

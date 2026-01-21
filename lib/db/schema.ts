@@ -28,12 +28,23 @@ export const items = pgTable('items', {
   fabric: text('fabric'),
   specialFeatures: text('special_features'),
   imageUrl: text('image_url'),
+  // Stock management fields
+  stockQuantity: integer('stock_quantity').default(0),
+  lowStockThreshold: integer('low_stock_threshold').default(5),
+  trackStock: boolean('track_stock').default(false),
+  // Cost and supplier fields
+  costPrice: numeric('cost_price', { precision: 10, scale: 2 }),
+  supplierName: text('supplier_name'),
+  supplierSku: text('supplier_sku'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at')
 }, (table) => ({
   // Performance indexes for common queries (as per ARCHITECTURE_ANALYSIS.md)
   nameIdx: index('items_name_idx').on(table.name),
-  deletedAtIdx: index('items_deleted_at_idx').on(table.deletedAt)
+  deletedAtIdx: index('items_deleted_at_idx').on(table.deletedAt),
+  // Stock management indexes
+  trackStockIdx: index('items_track_stock_idx').on(table.trackStock),
+  lowStockIdx: index('items_low_stock_idx').on(table.stockQuantity, table.lowStockThreshold)
 }));
 
 export const itemDesigns = pgTable('item_designs', {
@@ -55,6 +66,7 @@ export const orders = pgTable('orders', {
   orderFrom: orderFromEnum('order_from').notNull(),
   customerName: text('customer_name').notNull(),
   customerId: text('customer_id').notNull(),
+  customerIdRef: integer('customer_id_ref'), // FK to customers table
   address: text('address'),
   totalPrice: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
   status: text('status').default('pending'),
@@ -91,6 +103,7 @@ export const orderItems = pgTable('order_items', {
   designId: integer('design_id').references(() => itemDesigns.id),
   name: text('name').notNull(),
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  costPrice: numeric('cost_price', { precision: 10, scale: 2 }), // Snapshot of cost at order time
   quantity: integer('quantity').notNull(),
   customizationRequest: text('customization_request')
 }, (table) => ({
@@ -215,7 +228,7 @@ export const itemTags = pgTable('item_tags', {
 // ============================================
 
 export const auditActionEnum = pgEnum('audit_action', [
-  'create', 'update', 'delete', 'restore', 'bulk_import', 'bulk_export'
+  'create', 'update', 'delete', 'restore', 'bulk_import', 'bulk_export', 'bulk_update', 'bulk_delete'
 ]);
 
 export const auditEntityEnum = pgEnum('audit_entity', [
@@ -294,4 +307,90 @@ export const importExportJobs = pgTable('import_export_jobs', {
   statusIdx: index('import_export_jobs_status_idx').on(table.status),
   userIdIdx: index('import_export_jobs_user_id_idx').on(table.userId),
   createdAtIdx: index('import_export_jobs_created_at_idx').on(table.createdAt)
+}));
+
+// ============================================
+// Customers Table
+// ============================================
+
+export const customerSourceEnum = pgEnum('customer_source', ['walk-in', 'online', 'referral', 'other']);
+
+export const customers = pgTable('customers', {
+  id: serial('id').primaryKey(),
+  customerId: text('customer_id').notNull().unique(), // Business identifier like "CUST-001"
+  name: text('name').notNull(),
+  email: text('email'),
+  phone: text('phone'),
+  address: text('address'),
+  source: customerSourceEnum('source'),
+  totalOrders: integer('total_orders').default(0),
+  totalSpent: numeric('total_spent', { precision: 10, scale: 2 }).default('0'),
+  firstOrderDate: timestamp('first_order_date'),
+  lastOrderDate: timestamp('last_order_date'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  customerIdIdx: index('customers_customer_id_idx').on(table.customerId),
+  nameIdx: index('customers_name_idx').on(table.name),
+  emailIdx: index('customers_email_idx').on(table.email),
+  phoneIdx: index('customers_phone_idx').on(table.phone),
+  sourceIdx: index('customers_source_idx').on(table.source),
+  lastOrderDateIdx: index('customers_last_order_date_idx').on(table.lastOrderDate)
+}));
+
+// ============================================
+// Order Notes Table
+// ============================================
+
+export const orderNoteTypeEnum = pgEnum('order_note_type', ['internal', 'customer', 'system']);
+
+export const orderNotes = pgTable('order_notes', {
+  id: serial('id').primaryKey(),
+  orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  noteText: text('note_text').notNull(),
+  noteType: orderNoteTypeEnum('note_type').notNull(),
+  isPinned: boolean('is_pinned').default(false),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: text('user_email'),
+  userName: text('user_name'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+}, (table) => ({
+  orderIdIdx: index('order_notes_order_id_idx').on(table.orderId),
+  noteTypeIdx: index('order_notes_note_type_idx').on(table.noteType),
+  isPinnedIdx: index('order_notes_is_pinned_idx').on(table.isPinned),
+  createdAtIdx: index('order_notes_created_at_idx').on(table.createdAt),
+  // Composite for fetching pinned notes first, then by date
+  orderPinnedIdx: index('order_notes_order_pinned_idx').on(table.orderId, table.isPinned, table.createdAt)
+}));
+
+// ============================================
+// Stock Transactions Table
+// ============================================
+
+export const stockTransactionTypeEnum = pgEnum('stock_transaction_type', [
+  'order_placed', 'order_cancelled', 'adjustment', 'restock', 'return'
+]);
+
+export const stockTransactions = pgTable('stock_transactions', {
+  id: serial('id').primaryKey(),
+  itemId: integer('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+  transactionType: stockTransactionTypeEnum('transaction_type').notNull(),
+  quantity: integer('quantity').notNull(), // Positive or negative
+  previousStock: integer('previous_stock'),
+  newStock: integer('new_stock'),
+  referenceType: text('reference_type'), // e.g., 'order'
+  referenceId: integer('reference_id'),
+  notes: text('notes'),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: text('user_email'),
+  createdAt: timestamp('created_at').defaultNow().notNull()
+}, (table) => ({
+  itemIdIdx: index('stock_transactions_item_id_idx').on(table.itemId),
+  transactionTypeIdx: index('stock_transactions_type_idx').on(table.transactionType),
+  referenceIdx: index('stock_transactions_reference_idx').on(table.referenceType, table.referenceId),
+  createdAtIdx: index('stock_transactions_created_at_idx').on(table.createdAt),
+  // Composite for item stock history queries
+  itemHistoryIdx: index('stock_transactions_item_history_idx').on(table.itemId, table.createdAt)
 }));
