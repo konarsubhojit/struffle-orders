@@ -19,7 +19,7 @@ const FeedbackToken = {
       orderId,
       token,
       expiresAt,
-      used: 0
+      used: false
     }).returning();
     
     return result[0];
@@ -39,7 +39,7 @@ const FeedbackToken = {
       .where(
         and(
           eq(feedbackTokens.token, token),
-          eq(feedbackTokens.used, 0),
+          eq(feedbackTokens.used, false),
           gt(feedbackTokens.expiresAt, now)
         )
       );
@@ -60,7 +60,7 @@ const FeedbackToken = {
     const db = getDatabase();
     
     await db.update(feedbackTokens)
-      .set({ used: 1 })
+      .set({ used: true })
       .where(eq(feedbackTokens.token, token));
   },
 
@@ -79,7 +79,7 @@ const FeedbackToken = {
       .where(
         and(
           eq(feedbackTokens.orderId, orderId),
-          eq(feedbackTokens.used, 0),
+          eq(feedbackTokens.used, false),
           gt(feedbackTokens.expiresAt, now)
         )
       );

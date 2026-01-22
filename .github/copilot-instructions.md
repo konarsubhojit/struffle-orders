@@ -151,6 +151,40 @@ queryKeys.auditLogs.list(filters) // ['auditLogs', 'list', filters]
 - API routes follow RESTful conventions
 - Use `executeWithRetry` for database operations
 
+## Database Schema Best Practices (January 2026 Optimization)
+
+The schema was optimized following PostgreSQL best practices:
+
+### Key Optimizations Applied
+
+1. **Timezone-aware timestamps** - All `timestamp` columns now use `{ withTimezone: true }`
+2. **Proper enums** - Status fields (`status`, `paymentStatus`, `deliveryStatus`, etc.) use PostgreSQL enums instead of text
+3. **JSONB for JSON data** - `auditLogs.previousData`, `newData`, `changedFields`, `metadata` and `importExportJobs.errors` use `jsonb` type
+4. **inet for IP addresses** - `auditLogs.ipAddress` uses PostgreSQL `inet` type
+5. **Boolean for boolean fields** - `feedbacks.isPublic` and `feedbackTokens.used` use `boolean` (not integer)
+6. **bigserial for high-volume tables** - `auditLogs`, `orderAuditTrail`, `stockTransactions` use `bigserial` PKs
+7. **Composite primary keys** - `itemCategories` and `itemTags` use composite PKs (no surrogate `id`)
+8. **Missing foreign keys added** - `orders.customerIdRef` → `customers.id`, `categories.parentId` → `categories.id` (self-ref)
+9. **Check constraints** - Rating ranges (1-5), positive quantities, non-negative stock, priority range (0-10)
+10. **Partial indexes** - Soft-delete patterns (`items_active_idx`), public feedbacks, unused tokens
+11. **Composite indexes** - Dashboard query patterns (`status + createdAt`), cursor pagination
+12. **Removed redundant indexes** - Unique constraints already create indexes
+
+### New Enums Added
+- `paymentStatusEnum` - 'unpaid', 'partially_paid', 'paid', 'cash_on_delivery', 'refunded'
+- `confirmationStatusEnum` - 'unconfirmed', 'pending_confirmation', 'confirmed', 'cancelled'
+- `deliveryStatusEnum` - 'not_shipped', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned'
+- `digestStatusEnum` - 'pending', 'started', 'running', 'sent', 'completed', 'failed'
+- `jobTypeEnum` - 'import', 'export'
+- `jobStatusEnum` - 'pending', 'processing', 'completed', 'failed'
+- `stockReferenceTypeEnum` - 'order', 'manual', 'return', 'adjustment'
+
+### Migration Required
+Run `lib/db/migrations/0001_schema_optimization.sql` to:
+- Create `updated_at` trigger function
+- Apply triggers to all tables with `updatedAt`
+- Analyze tables for query planner optimization
+
 ## Recent Changes (January 2026)
 
 ### New Features Added
@@ -167,13 +201,9 @@ queryKeys.auditLogs.list(filters) // ['auditLogs', 'list', filters]
 - `stock_transactions` - Stock movement history
 
 ### New Columns on Existing Tables
-- `items`: stockQuantity, lowStockThreshold, trackStock, costPrice, supplierName, supplierSku
-- `order_items`: costPrice (snapshot at order time)
-- `orders`: customerIdRef (FK to customers)
-
-### New API Routes
-- `/api/orders/bulk-update` (POST) - Bulk status/payment update
-- `/api/orders/bulk-delete` (POST) - Bulk soft/hard delete
+- `items`: stockQuantity, lowStockThreshold, trackStock, costPrice, supplierName, supplierSku, updatedAt
+- `order_items`: costPrice (snapshot at order time), createdAt, updatedAt
+- `orders`: customerIdRef (FK to customers), updatedAt
 - `/api/orders/[id]/notes` (GET, POST) - Order notes CRUD
 - `/api/orders/[id]/notes/[noteId]` (GET, PUT, DELETE)
 - `/api/customers` (GET, POST) - Customer list/create

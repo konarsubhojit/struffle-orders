@@ -76,7 +76,7 @@ const Feedback = {
       comment: data.comment?.trim() || null,
       productQuality: data.productQuality || null,
       deliveryExperience: data.deliveryExperience || null,
-      isPublic: data.isPublic !== undefined ? (data.isPublic ? 1 : 0) : 1
+      isPublic: data.isPublic ?? true
     }).returning();
     
     return transformFeedback(feedbackResult[0]);
@@ -98,7 +98,7 @@ const Feedback = {
     if (data.comment !== undefined) updateData.comment = data.comment?.trim() || null;
     if (data.productQuality !== undefined) updateData.productQuality = data.productQuality;
     if (data.deliveryExperience !== undefined) updateData.deliveryExperience = data.deliveryExperience;
-    if (data.isPublic !== undefined) updateData.isPublic = data.isPublic ? 1 : 0;
+    if (data.isPublic !== undefined) updateData.isPublic = Boolean(data.isPublic);
     if (data.responseText !== undefined) {
       updateData.responseText = data.responseText?.trim() || null;
       if (data.responseText?.trim()) {
