@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Get user session for audit
     const session = await getServerSession(authOptions);
     const user = session?.user ? {
-      id: (session.user as any).id,
+      id: (session.user as any).dbUserId as number | undefined,
       email: session.user.email || undefined,
       name: session.user.name || undefined,
     } : undefined;
