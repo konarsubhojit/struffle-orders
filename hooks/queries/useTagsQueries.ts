@@ -11,7 +11,8 @@ async function fetchTags(): Promise<Tag[]> {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch tags');
   }
-  return response.json();
+  const data = await response.json();
+  return data.items || data;
 }
 
 async function fetchTag(id: TagId): Promise<Tag> {

@@ -36,9 +36,12 @@ async function fetchAuditLogs(
   limit: number = 50,
   filters: AuditLogsFilters = {}
 ): Promise<AuditLogsResponse> {
+  // Cap limit to 100 to match server-side cap
+  const cappedLimit = Math.min(limit, 100);
+  const offset = (page - 1) * cappedLimit;
   const params = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
+    offset: offset.toString(),
+    limit: cappedLimit.toString(),
   });
   
   if (filters.entityType) params.set('entityType', filters.entityType);
@@ -53,7 +56,16 @@ async function fetchAuditLogs(
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch audit logs');
   }
-  return response.json();
+  const data = await response.json();
+  
+  // Transform API response to expected format
+  return {
+    items: data.items || [],
+    total: data.pagination?.total || 0,
+    page,
+    limit: cappedLimit,
+    hasMore: data.pagination?.hasMore || false,
+  };
 }
 
 async function fetchRecentActivity(
