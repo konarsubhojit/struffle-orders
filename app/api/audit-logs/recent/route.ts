@@ -16,7 +16,23 @@ export async function GET(request: NextRequest) {
 
     const recentActivity = await AuditLog.getRecentActivity(Math.min(limit, 50));
 
-    return NextResponse.json({ items: recentActivity });
+    // Compute summary statistics
+    const byAction: Record<string, number> = {};
+    const byEntity: Record<string, number> = {};
+    
+    for (const log of recentActivity) {
+      byAction[log.action] = (byAction[log.action] || 0) + 1;
+      byEntity[log.entityType] = (byEntity[log.entityType] || 0) + 1;
+    }
+
+    return NextResponse.json({
+      logs: recentActivity,
+      summary: {
+        total: recentActivity.length,
+        byAction,
+        byEntity,
+      },
+    });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch recent activity';
     logger.error('GET /api/audit-logs/recent error', error);
