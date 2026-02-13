@@ -36,10 +36,12 @@ async function fetchAuditLogs(
   limit: number = 50,
   filters: AuditLogsFilters = {}
 ): Promise<AuditLogsResponse> {
-  const offset = (page - 1) * limit;
+  // Cap limit to 100 to match server-side cap
+  const cappedLimit = Math.min(limit, 100);
+  const offset = (page - 1) * cappedLimit;
   const params = new URLSearchParams({
     offset: offset.toString(),
-    limit: limit.toString(),
+    limit: cappedLimit.toString(),
   });
   
   if (filters.entityType) params.set('entityType', filters.entityType);
@@ -61,7 +63,7 @@ async function fetchAuditLogs(
     items: data.items || [],
     total: data.pagination?.total || 0,
     page,
-    limit,
+    limit: cappedLimit,
     hasMore: data.pagination?.hasMore || false,
   };
 }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import AuditLog from '@/lib/models/AuditLog';
 import { createLogger } from '@/lib/utils/logger';
 import type { AuditAction, AuditEntityType } from '@/types';
@@ -8,10 +10,21 @@ const logger = createLogger('AuditLogsAPI');
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/audit-logs - Get audit logs with pagination and filters
+ * GET /api/audit-logs - Get audit logs with pagination and filters (admin only)
  */
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Check if current user is admin
+    if (session.user.role !== 'admin') {
+      return NextResponse.json({ message: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     
     const limit = Number.parseInt(searchParams.get('limit') || '50', 10);

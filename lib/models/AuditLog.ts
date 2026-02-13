@@ -174,13 +174,23 @@ const AuditLog = {
   /**
    * Get recent activity (for dashboard)
    */
-  async getRecentActivity(limit = 10) {
+  async getRecentActivity(limit = 10, hours?: number) {
     return executeWithRetry(async () => {
       const db = getDatabase();
+
+      const conditions = [];
+      if (hours) {
+        const cutoffDate = new Date();
+        cutoffDate.setHours(cutoffDate.getHours() - hours);
+        conditions.push(gte(auditLogs.createdAt, cutoffDate));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
       const result = await db
         .select()
         .from(auditLogs)
+        .where(whereClause)
         .orderBy(desc(auditLogs.createdAt))
         .limit(limit);
       
