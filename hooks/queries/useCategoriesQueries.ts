@@ -11,7 +11,8 @@ async function fetchCategories(): Promise<Category[]> {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch categories');
   }
-  return response.json();
+  const data = await response.json();
+  return data.items || data;
 }
 
 async function fetchCategoriesTree(): Promise<Category[]> {
@@ -20,7 +21,8 @@ async function fetchCategoriesTree(): Promise<Category[]> {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch categories tree');
   }
-  return response.json();
+  const data = await response.json();
+  return data.items || data;
 }
 
 async function fetchCategory(id: CategoryId): Promise<Category> {

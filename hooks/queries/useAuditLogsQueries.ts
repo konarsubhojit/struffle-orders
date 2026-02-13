@@ -36,8 +36,9 @@ async function fetchAuditLogs(
   limit: number = 50,
   filters: AuditLogsFilters = {}
 ): Promise<AuditLogsResponse> {
+  const offset = (page - 1) * limit;
   const params = new URLSearchParams({
-    page: page.toString(),
+    offset: offset.toString(),
     limit: limit.toString(),
   });
   
@@ -53,7 +54,16 @@ async function fetchAuditLogs(
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch audit logs');
   }
-  return response.json();
+  const data = await response.json();
+  
+  // Transform API response to expected format
+  return {
+    items: data.items || [],
+    total: data.pagination?.total || 0,
+    page,
+    limit,
+    hasMore: data.pagination?.hasMore || false,
+  };
 }
 
 async function fetchRecentActivity(
