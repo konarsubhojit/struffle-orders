@@ -25,7 +25,8 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SendIcon from '@mui/icons-material/Send';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { createOrder, getOrder } from '@/lib/api/client';
+import { getOrder } from '@/lib/api/client';
+import { useCreateOrder } from '@/hooks/mutations/useOrdersMutations';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import {
@@ -35,7 +36,7 @@ import {
   PRIORITY_LEVELS,
 } from '@/constants/orderConstants';
 import DesignPicker from './DesignPicker';
-import type { Item, Order, OrderId, ItemId, OrderSource, PaymentStatus, ConfirmationStatus } from '@/types';
+import type { Item, Order, OrderId, OrderSource, PaymentStatus, ConfirmationStatus } from '@/types';
 
 interface OrderFormProps {
   items: Item[];
@@ -65,6 +66,7 @@ const formatItemDisplayName = (item: Item): string => {
 function OrderForm({ items, onOrderCreated, duplicateOrderId }: OrderFormProps) {
   const { formatPrice } = useCurrency();
   const { showSuccess, showError } = useNotification();
+  const createOrderMutation = useCreateOrder();
   const [orderFrom, setOrderFrom] = useState<OrderSource | ''>('');
   const [customerName, setCustomerName] = useState('');
   const [customerId, setCustomerId] = useState('');
@@ -244,7 +246,7 @@ function OrderForm({ items, onOrderCreated, duplicateOrderId }: OrderFormProps) 
 
     setLoading(true);
     try {
-      const order = await createOrder({
+      const order = await createOrderMutation.mutateAsync({
         orderFrom,
         customerName: customerName.trim(),
         customerId: customerId.trim(),

@@ -105,6 +105,17 @@ function encodeDeletedCursor(item) {
 }
 
 const Item = {
+  async findByIdempotencyKey(idempotencyKey) {
+    if (!idempotencyKey) return null;
+    const db = getDatabase();
+    const result = await db.select().from(items)
+      .where(eq(items.idempotencyKey, idempotencyKey))
+      .limit(1);
+    if (result.length === 0) return null;
+    const enriched = await enrichItemsWithDesigns([transformItem(result[0])]);
+    return enriched[0];
+  },
+
   async find() {
     return executeWithRetry(async () => {
       const db = getDatabase();
@@ -171,6 +182,7 @@ const Item = {
     return executeWithRetry(async () => {
       const db = getDatabase();
       const result = await db.insert(items).values({
+        idempotencyKey: data.idempotencyKey || null,
         name: data.name.trim(),
         price: data.price.toString(),
         color: data.color?.trim() || null,

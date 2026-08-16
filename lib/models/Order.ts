@@ -122,6 +122,16 @@ function decodeCursor(cursor) {
 }
 
 const Order = {
+  async findByIdempotencyKey(idempotencyKey) {
+    if (!idempotencyKey) return null;
+    const db = getDatabase();
+    const result = await db.select().from(orders)
+      .where(eq(orders.idempotencyKey, idempotencyKey))
+      .limit(1);
+    if (result.length === 0) return null;
+    return this.findById(result[0].id);
+  },
+
   async find() {
     return executeWithRetry(async () => {
       const db = getDatabase();
@@ -376,6 +386,7 @@ const Order = {
 
       const orderResult = await db.insert(orders).values({
         orderId: orderId,
+        idempotencyKey: data.idempotencyKey || null,
         orderFrom: data.orderFrom,
         customerName: data.customerName.trim(),
         customerId: data.customerId.trim(),

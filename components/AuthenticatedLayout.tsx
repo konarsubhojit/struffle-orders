@@ -25,6 +25,7 @@ import TopNavigationBar from '@/components/TopNavigationBar';
 import PriorityNotificationPanel from '@/components/analytics/PriorityNotificationPanel';
 import { NAVIGATION_ROUTES } from '@/constants/navigation';
 import type { OrderId } from '@/types';
+import OfflineSyncStatus from '@/components/OfflineSyncStatus';
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0';
 
@@ -283,6 +284,7 @@ export default function AuthenticatedLayout({
             mx: 'auto',
           }}
         >
+          <OfflineSyncStatus />
           {children}
         </Box>
       </Box>

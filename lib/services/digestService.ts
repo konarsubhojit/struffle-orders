@@ -1,12 +1,13 @@
 // @ts-nocheck
-import { eq, and, gte, lt, ne } from 'drizzle-orm';
+import { eq, and, gte, lt, ne, desc, sql } from 'drizzle-orm';
 import { getDatabase } from '@/lib/db/connection';
 // Note: orderReminderState is kept for backward compatibility and for upsertOrderReminderState
 // which is called from orders route when orders are created/updated
-import { orders, orderReminderState, digestRuns, notificationRecipients } from '@/lib/db/schema';
+import { orders, orderReminderState, digestRuns, notificationRecipients, feedbacks } from '@/lib/db/schema';
 import { createLogger } from '@/lib/utils/logger';
 import { computeDigestBuckets, getTodayInKolkata, formatDateForDigest, getKolkataStartOfDay } from '@/lib/utils/digestBuckets';
 import { sendEmail, buildDigestEmailHtml, buildDigestEmailText } from '@/lib/services/emailService';
+import { DateTime } from 'luxon';
 
 const logger = createLogger('DigestService');
 
@@ -26,11 +27,11 @@ export async function getEnabledRecipients() {
  * @param {string} digestDate - Date in YYYY-MM-DD format (Kolkata)
  * @returns {Promise<Object|null>} Existing digest run or null
  */
-export async function getDigestRunForDate(digestDate) {
+export async function getDigestRunForDate(digestDate, period = 'daily') {
   const db = getDatabase();
   const result = await db.select()
     .from(digestRuns)
-    .where(eq(digestRuns.digestDate, digestDate));
+    .where(and(eq(digestRuns.digestDate, digestDate), eq(digestRuns.period, period)));
   
   return result.length > 0 ? result[0] : null;
 }
@@ -42,10 +43,10 @@ export async function getDigestRunForDate(digestDate) {
  * @param {string|null} error - Error message if failed
  * @returns {Promise<Object>} Created/updated digest run
  */
-export async function upsertDigestRun(digestDate, status, error = null) {
+export async function upsertDigestRun(digestDate, status, error = null, period = 'daily') {
   const db = getDatabase();
   
-  const existing = await getDigestRunForDate(digestDate);
+  const existing = await getDigestRunForDate(digestDate, period);
   
   if (existing) {
     const updateData = { status };
@@ -58,7 +59,7 @@ export async function upsertDigestRun(digestDate, status, error = null) {
     
     await db.update(digestRuns)
       .set(updateData)
-      .where(eq(digestRuns.digestDate, digestDate));
+      .where(and(eq(digestRuns.digestDate, digestDate), eq(digestRuns.period, period)));
     
     return { ...existing, ...updateData };
   }
@@ -66,6 +67,7 @@ export async function upsertDigestRun(digestDate, status, error = null) {
   const result = await db.insert(digestRuns)
     .values({
       digestDate,
+      period,
       status,
       startedAt: new Date(),
       sentAt: status === 'sent' ? new Date() : null,
@@ -306,37 +308,34 @@ export async function runDailyDigest() {
   if (idempotencyCheck) {
     return idempotencyCheck;
   }
-  
+
   await upsertDigestRun(digestDate, 'started');
-  
+
   try {
     const recipients = await getEnabledRecipients();
-    
     if (recipients.length === 0) {
       logger.warn('No enabled recipients found');
       await upsertDigestRun(digestDate, 'sent');
       return { status: 'sent', digestDate, message: 'No recipients configured' };
     }
-    
+
     const buckets = computeDigestBuckets();
     const bucketData = await fetchOrdersForAllBuckets(buckets);
-    
     if (areAllBucketsEmpty(bucketData)) {
       logger.info('No orders to send in digest');
       await upsertDigestRun(digestDate, 'sent');
       return { status: 'sent', digestDate, message: 'No orders requiring reminders' };
     }
-    
+
     const recipientEmails = await sendDigestEmail(recipients, bucketData, digestDate);
     await upsertDigestRun(digestDate, 'sent');
-    
-    const totalOrders = bucketData.overdueOrders.length + bucketData.oneDayOrders.length + bucketData.threeDayOrders.length + bucketData.sevenDayOrders.length;
+    const totalOrders = bucketData.overdueOrders.length + bucketData.oneDayOrders.length
+      + bucketData.threeDayOrders.length + bucketData.sevenDayOrders.length;
     logger.info('Daily digest completed successfully', {
       digestDate,
       recipientCount: recipientEmails.length,
       orderCount: totalOrders
     });
-    
     return {
       status: 'sent',
       digestDate,
@@ -347,9 +346,177 @@ export async function runDailyDigest() {
         sevenDay: bucketData.sevenDayOrders.length
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Daily digest failed', error);
-    await upsertDigestRun(digestDate, 'failed', error.message);
+    const message = error instanceof Error ? error.message : 'Unknown digest error';
+    await upsertDigestRun(digestDate, 'failed', message);
+    throw error;
+  }
+}
+
+export type DigestPeriod = 'daily' | 'weekly';
+
+export function getDigestPeriodWindow(period: DigestPeriod, now: DateTime = DateTime.now()) {
+  const zoned = now.setZone('Asia/Kolkata');
+  const start = period === 'weekly' ? zoned.startOf('week') : zoned.startOf('day');
+  return {
+    key: start.toFormat('yyyy-MM-dd'),
+    start: start.toJSDate(),
+    end: zoned.toJSDate(),
+  };
+}
+
+export function isDigestAlreadySent(run: { status?: string } | null | undefined): boolean {
+  return run?.status === 'sent';
+}
+
+async function claimDigest(periodKey: string, period: DigestPeriod) {
+  const db = getDatabase();
+  const inserted = await db.insert(digestRuns)
+    .values({ digestDate: periodKey, period, status: 'started', startedAt: new Date() })
+    .onConflictDoNothing({ target: [digestRuns.digestDate, digestRuns.period] })
+    .returning();
+  if (inserted.length > 0) return { claimed: true };
+
+  const existing = await getDigestRunForDate(periodKey, period);
+  if (isDigestAlreadySent(existing)) return { claimed: false, status: 'already_sent' };
+  if (existing?.status === 'started' || existing?.status === 'running') {
+    return { claimed: false, status: 'in_progress' };
+  }
+
+  await db.update(digestRuns)
+    .set({ status: 'started', startedAt: new Date(), sentAt: null, error: null })
+    .where(and(eq(digestRuns.digestDate, periodKey), eq(digestRuns.period, period)));
+  return { claimed: true };
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+async function getSalesDigestData(start: Date, end: Date, periodKey: string, period: DigestPeriod) {
+  const db = getDatabase();
+  const [summary] = await db.select({
+    orderCount: sql<number>`count(*)::int`,
+    revenue: sql<string>`coalesce(sum(${orders.totalPrice}), 0)`,
+  }).from(orders).where(and(gte(orders.createdAt, start), lt(orders.createdAt, end)));
+
+  const urgentOrders = await db.select({
+    orderId: orders.orderId,
+    customerName: orders.customerName,
+    priority: orders.priority,
+    totalPrice: orders.totalPrice,
+    expectedDeliveryDate: orders.expectedDeliveryDate,
+  }).from(orders).where(and(
+    gte(orders.priority, 7),
+    ne(orders.status, 'completed'),
+    ne(orders.status, 'cancelled'),
+  )).orderBy(desc(orders.priority), orders.expectedDeliveryDate);
+
+  const previousRuns = await db.select({ sentAt: digestRuns.sentAt })
+    .from(digestRuns)
+    .where(and(
+      eq(digestRuns.status, 'sent'),
+      eq(digestRuns.period, period),
+      lt(digestRuns.digestDate, periodKey),
+    ))
+    .orderBy(desc(digestRuns.digestDate))
+    .limit(1);
+  const feedbackSince = previousRuns[0]?.sentAt || start;
+  const newFeedback = await db.select({
+    rating: feedbacks.rating,
+    comment: feedbacks.comment,
+    createdAt: feedbacks.createdAt,
+  }).from(feedbacks)
+    .where(and(gte(feedbacks.createdAt, feedbackSince), lt(feedbacks.createdAt, end)))
+    .orderBy(desc(feedbacks.createdAt));
+
+  return {
+    orderCount: Number(summary?.orderCount || 0),
+    revenue: Number(summary?.revenue || 0),
+    urgentOrders,
+    newFeedback,
+    feedbackSince,
+  };
+}
+
+function buildSalesDigestContent(
+  period: DigestPeriod,
+  periodKey: string,
+  data: Awaited<ReturnType<typeof getSalesDigestData>>,
+) {
+  const urgentRows = data.urgentOrders.map((order) =>
+    `<li>${escapeHtml(order.orderId)} — ${escapeHtml(order.customerName)} (priority ${order.priority})</li>`
+  ).join('');
+  const feedbackRows = data.newFeedback.map((feedback) =>
+    `<li>${feedback.rating}/5${feedback.comment ? ` — ${escapeHtml(feedback.comment)}` : ''}</li>`
+  ).join('');
+  const html = `
+    <h1>${period === 'weekly' ? 'Weekly' : 'Daily'} sales digest</h1>
+    <p>Period beginning ${escapeHtml(periodKey)}</p>
+    <ul>
+      <li>Orders created: ${data.orderCount}</li>
+      <li>Revenue: ${data.revenue.toFixed(2)}</li>
+      <li>Priority or urgent orders outstanding: ${data.urgentOrders.length}</li>
+      <li>New feedback since the last digest: ${data.newFeedback.length}</li>
+    </ul>
+    <h2>Outstanding priority orders</h2>
+    <ul>${urgentRows || '<li>None</li>'}</ul>
+    <h2>New feedback</h2>
+    <ul>${feedbackRows || '<li>None</li>'}</ul>`;
+  const text = [
+    `${period === 'weekly' ? 'Weekly' : 'Daily'} sales digest`,
+    `Period beginning ${periodKey}`,
+    `Orders created: ${data.orderCount}`,
+    `Revenue: ${data.revenue.toFixed(2)}`,
+    `Priority or urgent orders outstanding: ${data.urgentOrders.length}`,
+    `New feedback since the last digest: ${data.newFeedback.length}`,
+  ].join('\n');
+  return { html, text };
+}
+
+export async function runSalesDigest(period: DigestPeriod = 'daily') {
+  const window = getDigestPeriodWindow(period);
+  const claim = await claimDigest(window.key, period);
+  if (!claim.claimed) return { status: claim.status, period, periodKey: window.key };
+
+  try {
+    const recipients = await getEnabledRecipients();
+    if (recipients.length === 0) {
+      await upsertDigestRun(window.key, 'completed', null, period);
+      return { status: 'skipped', reason: 'No recipients configured', periodKey: window.key };
+    }
+
+    const data = await getSalesDigestData(window.start, window.end, window.key, period);
+    const content = buildSalesDigestContent(period, window.key, data);
+    const results = await Promise.all(recipients.map((recipient) => sendEmail({
+      to: [recipient.email],
+      subject: `${period === 'weekly' ? 'Weekly' : 'Daily'} sales digest — ${window.key}`,
+      ...content,
+    })));
+    if (results.every((result) => result?.skipped)) {
+      await upsertDigestRun(window.key, 'completed', null, period);
+      return { status: 'skipped', reason: 'Email provider is not configured', periodKey: window.key };
+    }
+
+    await upsertDigestRun(window.key, 'sent', null, period);
+    return {
+      status: 'sent',
+      period,
+      periodKey: window.key,
+      orderCount: data.orderCount,
+      revenue: data.revenue,
+      urgentOrderCount: data.urgentOrders.length,
+      newFeedbackCount: data.newFeedback.length,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown digest error';
+    await upsertDigestRun(window.key, 'failed', message, period);
     throw error;
   }
 }

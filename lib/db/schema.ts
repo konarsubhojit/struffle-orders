@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   index,
+  uniqueIndex,
   date,
   boolean,
   primaryKey,
@@ -83,6 +84,7 @@ export const items = pgTable('items', {
   fabric: text('fabric'),
   specialFeatures: text('special_features'),
   imageUrl: text('image_url'),
+  idempotencyKey: text('idempotency_key').unique(),
   // Stock management fields
   stockQuantity: integer('stock_quantity').default(0).notNull(),
   lowStockThreshold: integer('low_stock_threshold').default(5).notNull(),
@@ -161,6 +163,7 @@ export const customers = pgTable('customers', {
 export const orders = pgTable('orders', {
   id: serial('id').primaryKey(),
   orderId: text('order_id').notNull().unique(),
+  idempotencyKey: text('idempotency_key').unique(),
   orderFrom: orderFromEnum('order_from').notNull(),
   customerName: text('customer_name').notNull(),
   customerId: text('customer_id').notNull(),
@@ -288,12 +291,15 @@ export const orderReminderState = pgTable('order_reminder_state', {
 
 export const digestRuns = pgTable('digest_runs', {
   id: serial('id').primaryKey(),
-  digestDate: date('digest_date').notNull().unique(),
+  digestDate: date('digest_date').notNull(),
+  period: text('period').default('daily').notNull(),
   status: digestStatusEnum('status').notNull(),
   startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
   sentAt: timestamp('sent_at', { withTimezone: true }),
   error: text('error')
-});
+}, (table) => [
+  uniqueIndex('digest_runs_date_period_unique').on(table.digestDate, table.period),
+]);
 
 // ============================================
 // Item Categories & Tags System

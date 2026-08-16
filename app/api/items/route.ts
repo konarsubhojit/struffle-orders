@@ -1,41 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
 import Item from '@/lib/models/Item';
 import { createLogger } from '@/lib/utils/logger';
 import { parsePaginationParams } from '@/lib/utils/pagination';
 import { invalidateItemCache } from '@/lib/middleware/cache';
 import { getRedisClient, getRedisIfReady } from '@/lib/db/redisClient';
 import { getCacheVersion, CACHE_VERSION_KEYS } from '@/lib/middleware/cache';
-import { IMAGE_CONFIG } from '@/lib/constants/imageConstants';
+import { uploadDataImage } from '@/lib/storage/images';
+import { isUniqueViolation, readIdempotencyKey } from '@/lib/utils/idempotency';
+import ItemDesign from '@/lib/models/ItemDesign';
 
 const logger = createLogger('ItemsAPI');
 
 // Disable Next.js caching - use only Redis
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-async function uploadImage(image: string) {
-  const matches = image.match(/^data:image\/(\w+);base64,(.+)$/);
-  if (!matches) {
-    throw new Error('Invalid image format');
-  }
-  
-  const extension = matches[1];
-  const base64Data = matches[2];
-  const buffer = Buffer.from(base64Data, 'base64');
-  
-  if (buffer.length > IMAGE_CONFIG.MAX_SIZE) {
-    throw new Error(`Image size should be less than ${IMAGE_CONFIG.MAX_SIZE_MB}MB`);
-  }
-  
-  const filename = `items/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
-  const blob = await put(filename, buffer, { 
-    access: 'public',
-    contentType: `image/${extension}`
-  });
-  
-  return blob.url;
-}
 
 /**
  * GET /api/items - Get all items with cursor or offset pagination
@@ -86,11 +64,16 @@ export async function GET(request: NextRequest) {
     let result;
     
     if (cursorParam) {
-      result = await (Item.findCursor as any)({ 
+      const findCursor = Item.findCursor as unknown as (params: {
+        limit: number;
+        cursor: string;
+        search: string;
+      }) => Promise<{ items: unknown[]; pagination: { limit: number; nextCursor: string | null; hasMore: boolean } }>;
+      result = await findCursor({
         limit, 
         cursor: cursorParam, 
         search 
-      }) as { items: unknown[]; pagination: { limit: number; nextCursor: string | null; hasMore: boolean } };
+      });
     } else {
       result = await Item.findPaginated({ page, limit, search });
     }
@@ -130,7 +113,18 @@ export async function GET(request: NextRequest) {
  * POST /api/items - Create a new item
  */
 export async function POST(request: NextRequest) {
+  let idempotencyKey: string | null = null;
   try {
+    idempotencyKey = readIdempotencyKey(request.headers);
+    if (idempotencyKey) {
+      const existing = await Item.findByIdempotencyKey(idempotencyKey);
+      if (existing) {
+        return NextResponse.json(
+          { message: 'Item already created', duplicate: true, resource: existing },
+          { status: 409 },
+        );
+      }
+    }
     // Check Content-Type to determine if it's FormData or JSON
     const contentType = request.headers.get('content-type') || '';
     let name: string;
@@ -139,6 +133,12 @@ export async function POST(request: NextRequest) {
     let fabric: string | undefined;
     let specialFeatures: string | undefined;
     let image: string | undefined;
+    let designs: Array<{
+      designName: string;
+      image: string;
+      isPrimary?: boolean;
+      displayOrder?: number;
+    }> = [];
 
     if (contentType.includes('multipart/form-data')) {
       // Handle FormData
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Handle JSON
       const body = await request.json();
-      ({ name, price, color, fabric, specialFeatures, image } = body);
+      ({ name, price, color, fabric, specialFeatures, image, designs = [] } = body);
     }
 
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
     
     if (image && typeof image === 'string' && image.startsWith('data:image/')) {
       try {
-        imageUrl = await uploadImage(image);
+        imageUrl = await uploadDataImage(image, 'items');
         logger.info('Image uploaded to blob storage', { url: imageUrl });
       } catch (uploadError: unknown) {
         const uploadErrorMessage = uploadError instanceof Error ? uploadError.message : 'Image upload failed';
@@ -194,8 +194,23 @@ export async function POST(request: NextRequest) {
       color: color?.trim() || '',
       fabric: fabric?.trim() || '',
       specialFeatures: specialFeatures?.trim() || '',
-      imageUrl
+      imageUrl,
+      idempotencyKey,
     });
+
+    for (const [index, design] of designs.entries()) {
+      if (!design.designName?.trim() || !design.image?.startsWith('data:image/')) {
+        throw new Error(`Design ${index + 1} is invalid`);
+      }
+      const designImageUrl = await uploadDataImage(design.image, `items/${item._id}/designs`);
+      await ItemDesign.create({
+        itemId: item._id,
+        designName: design.designName.trim(),
+        imageUrl: designImageUrl,
+        isPrimary: design.isPrimary || false,
+        displayOrder: design.displayOrder ?? index,
+      });
+    }
 
     // Invalidate item cache after creation
     await invalidateItemCache();
@@ -204,6 +219,13 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(item, { status: 201 });
   } catch (error: unknown) {
+    if (idempotencyKey && isUniqueViolation(error)) {
+      const existing = await Item.findByIdempotencyKey(idempotencyKey);
+      return NextResponse.json(
+        { message: 'Item already created', duplicate: true, resource: existing },
+        { status: 409 },
+      );
+    }
     const errorMessage = error instanceof Error ? error.message : 'Failed to create item';
     const errorStatusCode = (error as { statusCode?: number }).statusCode || 500;
     logger.error('POST /api/items error', error);

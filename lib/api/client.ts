@@ -26,6 +26,7 @@ import type {
   OrderId,
   FeedbackId,
 } from '@/types';
+import { createItemOfflineFirst, createOrderOfflineFirst } from '@/lib/offline/mutations';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
@@ -104,37 +105,9 @@ export async function getDeletedItems(
 
 export async function createItem(
   data: CreateItemData,
-  token?: string
+  _token?: string
 ): Promise<Item> {
-  // For file uploads, use FormData
-  if (data.image) {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('price', data.price.toString());
-    if (data.color) formData.append('color', data.color);
-    if (data.fabric) formData.append('fabric', data.fabric);
-    if (data.specialFeatures) formData.append('specialFeatures', data.specialFeatures);
-    if (data.image) formData.append('image', data.image);
-
-    const response = await fetch(`${API_BASE_URL}/items`, {
-      method: 'POST',
-      headers: getAuthHeaders(token),
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return await response.json();
-  }
-
-  return fetchApi<Item>('/items', {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(data),
-  });
+  return createItemOfflineFirst(data);
 }
 
 export async function updateItem(
@@ -207,13 +180,9 @@ export async function getOrder(
 
 export async function createOrder(
   data: CreateOrderData,
-  token?: string
+  _token?: string
 ): Promise<Order> {
-  return fetchApi<Order>('/orders', {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(data),
-  });
+  return createOrderOfflineFirst(data);
 }
 
 export async function updateOrder(

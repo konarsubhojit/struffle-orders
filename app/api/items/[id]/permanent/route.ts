@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { del } from '@vercel/blob';
 import Item from '@/lib/models/Item';
 import { createLogger } from '@/lib/utils/logger';
 import { invalidateItemCache } from '@/lib/middleware/cache';
+import { getStorageProvider } from '@/lib/storage';
 
 // Disable Next.js caching - use only Redis
 export const dynamic = 'force-dynamic';
@@ -40,7 +40,7 @@ export async function DELETE(
     // Remove image from blob storage if it exists
     if (imageUrl) {
       try {
-        await del(imageUrl);
+        await getStorageProvider().delete(imageUrl);
         logger.info('Image deleted from blob storage', { url: imageUrl });
       } catch (deleteError: any) {
         logger.warn('Failed to delete image from blob storage', { url: imageUrl, error: deleteError.message });

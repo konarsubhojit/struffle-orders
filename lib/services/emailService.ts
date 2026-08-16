@@ -47,6 +47,43 @@ function getTransporter() {
  * @returns {Promise<Object|null>} Send result or null if SMTP not configured
  */
 export async function sendEmail({ to, subject, html, text }) {
+  const provider = process.env.EMAIL_PROVIDER
+    || (process.env.RESEND_API_KEY ? 'resend' : process.env.SMTP_HOST ? 'smtp' : 'none');
+
+  if (provider === 'none') {
+    logger.warn('Email provider is not configured; skipping email send');
+    return { skipped: true };
+  }
+
+  if (provider === 'resend') {
+    if (!process.env.RESEND_API_KEY) {
+      logger.warn('Resend is selected but RESEND_API_KEY is missing; skipping email send');
+      return { skipped: true };
+    }
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: ['Bearer', process.env.RESEND_API_KEY].join(' '),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Kiyon Orders <onboarding@resend.dev>',
+        to,
+        subject,
+        html,
+        text,
+      }),
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(`Resend email failed with HTTP ${response.status}: ${message}`);
+    }
+    const result = await response.json();
+    logger.info('Email sent successfully with Resend', { recipientCount: to.length });
+    return result;
+  }
+
+  if (provider !== 'smtp') throw new Error(`Unsupported EMAIL_PROVIDER: ${provider}`);
   const transporter = getTransporter();
   
   if (!transporter) {

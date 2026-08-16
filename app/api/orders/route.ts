@@ -6,6 +6,7 @@ import { invalidateOrderCache } from '@/lib/middleware/cache';
 import { getRedisClient, getRedisIfReady } from '@/lib/db/redisClient';
 import { getCacheVersion, CACHE_VERSION_KEYS } from '@/lib/middleware/cache';
 import { PAGINATION } from '@/lib/constants/paginationConstants';
+import { isUniqueViolation, readIdempotencyKey } from '@/lib/utils/idempotency';
 
 const logger = createLogger('OrdersAPI');
 
@@ -133,7 +134,18 @@ export async function GET(request: NextRequest) {
  * POST /api/orders - Create a new order
  */
 export async function POST(request: NextRequest) {
+  let idempotencyKey: string | null = null;
   try {
+    idempotencyKey = readIdempotencyKey(request.headers);
+    if (idempotencyKey) {
+      const existing = await Order.findByIdempotencyKey(idempotencyKey);
+      if (existing) {
+        return NextResponse.json(
+          { message: 'Order already created', duplicate: true, resource: existing },
+          { status: 409 },
+        );
+      }
+    }
     const body = await request.json();
     const {
       orderFrom,
@@ -253,6 +265,7 @@ export async function POST(request: NextRequest) {
       trackingId: string;
       deliveryPartner: string;
       actualDeliveryDate: Date | null;
+      idempotencyKey: string | null;
     } = {
       orderFrom,
       customerName: customerName.trim(),
@@ -271,7 +284,8 @@ export async function POST(request: NextRequest) {
       deliveryStatus: deliveryStatus || 'not_shipped',
       trackingId: trackingId || '',
       deliveryPartner: deliveryPartner || '',
-      actualDeliveryDate: actualDeliveryDate ? new Date(actualDeliveryDate) : null
+      actualDeliveryDate: actualDeliveryDate ? new Date(actualDeliveryDate) : null,
+      idempotencyKey,
     };
 
     const newOrder = await Order.create(orderData);
@@ -283,6 +297,13 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error: unknown) {
+    if (idempotencyKey && isUniqueViolation(error)) {
+      const existing = await Order.findByIdempotencyKey(idempotencyKey);
+      return NextResponse.json(
+        { message: 'Order already created', duplicate: true, resource: existing },
+        { status: 409 },
+      );
+    }
     const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
     const errorStatusCode = (error as { statusCode?: number }).statusCode || 500;
     logger.error('POST /api/orders error', error);

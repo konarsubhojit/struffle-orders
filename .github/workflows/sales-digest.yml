@@ -1,0 +1,35 @@
+name: Scheduled Sales Digest
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      period:
+        description: Digest period
+        required: true
+        default: daily
+        type: choice
+        options:
+          - daily
+          - weekly
+
+permissions:
+  contents: read
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger digest
+        env:
+          DIGEST_URL: ${{ secrets.DIGEST_URL }}
+          DIGEST_SECRET: ${{ secrets.DIGEST_SECRET }}
+          PERIOD: ${{ inputs.period || vars.DIGEST_PERIOD || 'daily' }}
+        run: |
+          test -n "$DIGEST_URL"
+          test -n "$DIGEST_SECRET"
+          curl --fail-with-body --retry 3 \
+            -X POST \
+            -H "X-Digest-Secret: $DIGEST_SECRET" \
+            "${DIGEST_URL%/}/api/digest?period=$PERIOD"

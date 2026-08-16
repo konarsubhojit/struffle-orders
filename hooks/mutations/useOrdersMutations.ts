@@ -12,7 +12,9 @@ export function useCreateOrder(): UseMutationResult<Order, Error, CreateOrderDat
 
   return useMutation({
     mutationFn: (data) => api.createOrder(data),
-    onSuccess: () => {
+    meta: { offlineCapable: true },
+    onSuccess: (order) => {
+      queryClient.setQueryData(queryKeys.order(order._id), order);
       // Invalidate all orders-related queries
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       // Invalidate analytics since orders affect sales data
