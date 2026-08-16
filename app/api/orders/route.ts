@@ -6,6 +6,7 @@ import { invalidateOrderCache } from '@/lib/middleware/cache';
 import { getRedisClient, getRedisIfReady } from '@/lib/db/redisClient';
 import { getCacheVersion, CACHE_VERSION_KEYS } from '@/lib/middleware/cache';
 import { PAGINATION } from '@/lib/constants/paginationConstants';
+import { isUniqueViolation, readIdempotencyKey } from '@/lib/utils/idempotency';
 
 const logger = createLogger('OrdersAPI');
 
@@ -312,4 +313,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-import { isUniqueViolation, readIdempotencyKey } from '@/lib/utils/idempotency';
