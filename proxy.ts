@@ -15,8 +15,10 @@ export default async function proxy(request: NextRequest) {
     '/api/public/',
     '/api/auth/',
   ];
+  const sharedSecretRoutes = ['/api/digest', '/api/internal/digest/run'];
 
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+    || sharedSecretRoutes.includes(pathname);
   
   if (isPublicRoute) {
     return NextResponse.next();
