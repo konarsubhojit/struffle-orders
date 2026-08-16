@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put, del } from '@vercel/blob';
 import Item from '@/lib/models/Item';
 import { createLogger } from '@/lib/utils/logger';
 import { invalidateItemCache } from '@/lib/middleware/cache';
-import { IMAGE_CONFIG } from '@/lib/constants/imageConstants';
+import { getStorageProvider } from '@/lib/storage';
+import { uploadDataImage } from '@/lib/storage/images';
 
 // Disable Next.js caching - use only Redis
 export const dynamic = 'force-dynamic';
@@ -11,36 +11,13 @@ export const revalidate = 0;
 
 const logger = createLogger('ItemByIdAPI');
 
-async function uploadImage(image: string) {
-  const matches = image.match(/^data:image\/(\w+);base64,(.+)$/);
-  if (!matches) {
-    throw new Error('Invalid image format');
-  }
-  
-  const extension = matches[1];
-  const base64Data = matches[2];
-  const buffer = Buffer.from(base64Data, 'base64');
-  
-  if (buffer.length > IMAGE_CONFIG.MAX_SIZE) {
-    throw new Error(`Image size should be less than ${IMAGE_CONFIG.MAX_SIZE_MB}MB`);
-  }
-  
-  const filename = `items/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
-  const blob = await put(filename, buffer, { 
-    access: 'public',
-    contentType: `image/${extension}`
-  });
-  
-  return blob.url;
-}
-
-async function handleImageUpdate(image: any, existingImageUrl: string) {
+async function handleImageUpdate(image: unknown, existingImageUrl: string) {
   let newImageUrl = existingImageUrl;
   let oldImageUrl = null;
 
   if (image && typeof image === 'string' && image.startsWith('data:image/')) {
     oldImageUrl = existingImageUrl;
-    newImageUrl = await uploadImage(image);
+    newImageUrl = await uploadDataImage(image, 'items');
     logger.info('New image uploaded to blob storage', { url: newImageUrl });
   } else if (image === null || image === '') {
     oldImageUrl = existingImageUrl;
@@ -54,7 +31,7 @@ async function deleteOldImage(oldImageUrl: string | null) {
   if (!oldImageUrl) return;
   
   try {
-    await del(oldImageUrl);
+    await getStorageProvider().delete(oldImageUrl);
     logger.info('Old image deleted from blob storage', { url: oldImageUrl });
   } catch (deleteError: any) {
     logger.warn('Failed to delete old image from blob storage', { url: oldImageUrl, error: deleteError.message });

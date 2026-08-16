@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { del } from '@vercel/blob';
 import Item from '@/lib/models/Item';
 import { createLogger } from '@/lib/utils/logger';
 import { parsePaginationParams } from '@/lib/utils/pagination';

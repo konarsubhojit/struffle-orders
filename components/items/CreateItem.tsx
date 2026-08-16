@@ -11,7 +11,7 @@ import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
 import Collapse from '@mui/material/Collapse'
 import AddIcon from '@mui/icons-material/Add'
-import { createItem } from '@/lib/api/client'
+import { useCreateItem } from '@/hooks/mutations/useItemsMutations'
 import { useNotification } from '@/contexts/NotificationContext'
 import { useItemForm } from '@/hooks'
 import { useImageProcessing } from '@/hooks'
@@ -27,6 +27,7 @@ interface CreateItemProps {
 
 function CreateItem({ onItemCreated, copiedItem, onCancelCopy }: CreateItemProps): ReactElement {
   const { showSuccess, showError } = useNotification()
+  const createItemMutation = useCreateItem()
   const [loading, setLoading] = useState(false)
   const [designs, setDesigns] = useState<DesignImage[]>([])
   const [designProcessing, setDesignProcessing] = useState(false)
@@ -101,30 +102,15 @@ function CreateItem({ onItemCreated, copiedItem, onCancelCopy }: CreateItemProps
     setLoading(true)
     try {
       const formData = getFormData(validation.priceNum!, image)
-      const createdItem = await createItem(formData)
-      
-      // If designs were added, upload them
-      if (designs.length > 0 && createdItem._id) {
-        for (const design of designs) {
-          const response = await fetch(`/api/items/${createdItem._id}/designs`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              designName: design.name,
-              image: design.imageData,
-              isPrimary: design.isPrimary,
-              displayOrder: 0
-            })
-          })
-          
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ 
-              message: `Upload failed with HTTP ${response.status}: ${response.statusText}` 
-            }))
-            throw new Error(`Failed to upload design "${design.name}": ${errorData.message}`)
-          }
-        }
-      }
+      await createItemMutation.mutateAsync({
+        ...formData,
+        designs: designs.map((design, index) => ({
+          designName: design.name,
+          image: design.imageData,
+          isPrimary: design.isPrimary,
+          displayOrder: index,
+        })),
+      })
       
       const itemName = name.trim()
       resetForm()

@@ -149,6 +149,12 @@ export interface CreateItemData {
   fabric?: string;
   specialFeatures?: string;
   image?: string;
+  designs?: Array<{
+    designName: string;
+    image: string;
+    isPrimary?: boolean;
+    displayOrder?: number;
+  }>;
 }
 
 export interface UpdateItemData {

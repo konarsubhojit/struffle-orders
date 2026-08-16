@@ -48,6 +48,12 @@ The app runs on **http://localhost:3000**
 - **Guest mode** (view-only access)
 - Session management
 
+### Offline order entry
+- Installable PWA with an app-shell cache
+- Orders and items queue in IndexedDB during temporary outages
+- Automatic Background Sync where supported, reconnect fallback elsewhere
+- Visible pending/conflict status and a manual retry action
+
 ## 🗂️ Project Structure
 
 ```
@@ -99,7 +105,8 @@ next/
 - **State Management**: TanStack React Query
 - **Auth**: NextAuth.js with Google OAuth
 - **Database**: Neon PostgreSQL with Drizzle ORM
-- **Storage**: Vercel Blob (for images)
+- **Storage**: Cloudflare R2 or Vercel Blob through a reversible provider interface
+- **Email**: Resend or SMTP
 - **Styling**: Emotion CSS-in-JS
 - **Caching**: Redis with stale-while-revalidate strategy
 
@@ -257,6 +264,38 @@ npm run typecheck
 5. **Modern Stack** - Latest Next.js 16 features
 
 ## 🚢 Deployment
+
+### Scheduled digest
+
+Set `DIGEST_SECRET` and the Resend variables in the app. In GitHub, add repository
+secrets `DIGEST_URL` (the deployed app origin) and `DIGEST_SECRET`. The
+`Scheduled Sales Digest` workflow runs daily at 03:30 UTC and can be run
+manually. Set the `DIGEST_PERIOD` repository variable to `daily` or `weekly`.
+Runs in the same period are deduplicated in PostgreSQL.
+
+If email is not configured, the endpoint returns a successful `skipped` result
+without marking the period as sent.
+
+### Offline limits
+
+The PWA caches the shell and recently viewed item/order API responses on the
+current device. Create requests are queued, but edits and deletes still require
+a connection. Keep the page installed or revisit it after reconnecting on
+browsers without Background Sync. Conflicts remain in the queue with their data
+intact until the source item is restored or the operation is corrected.
+
+### R2 migration and rollback
+
+1. Create a public R2 bucket and configure all `R2_*` variables.
+2. Preview the copy with `npm run storage:migrate -- --dry-run`.
+3. Run `npm run storage:migrate`. It skips same-sized objects already in R2 and
+   verifies every copied object; Vercel source objects are never deleted.
+4. Set `STORAGE_PROVIDER=r2`. Missing R2 objects fall back to Vercel Blob and
+   are logged.
+
+To roll back, set `STORAGE_PROVIDER=vercel`; no database rewrite or reverse
+migration is required. Retain `BLOB_READ_WRITE_TOKEN` during the dual-read
+window.
 
 ### Vercel (Recommended)
 ```bash

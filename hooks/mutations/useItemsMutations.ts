@@ -12,7 +12,9 @@ export function useCreateItem(): UseMutationResult<Item, Error, CreateItemData> 
 
   return useMutation({
     mutationFn: (data) => api.createItem(data),
-    onSuccess: () => {
+    meta: { offlineCapable: true },
+    onSuccess: (item) => {
+      queryClient.setQueryData(queryKeys.item(item._id), item);
       // Invalidate all items-related queries
       queryClient.invalidateQueries({ queryKey: ['items'] });
       // Invalidate analytics since items affect sales data
